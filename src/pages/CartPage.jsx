@@ -1,13 +1,18 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../components/ui/card'
+import { ConfirmDialog } from '../components/ui/confirm-dialog'
 import { formatCurrency } from '../lib/format'
 
 export default function CartPage() {
   const { cartItems, cartTotal, updateCartQuantity, clearCart } = useApp()
+  const [clearOpen, setClearOpen] = useState(false)
+  const [removeOpen, setRemoveOpen] = useState(false)
+  const [pendingItem, setPendingItem] = useState(null)
 
   if (cartItems.length === 0) {
     return (
@@ -54,13 +59,16 @@ export default function CartPage() {
               </div>
               <div className="flex flex-col items-end justify-between">
                 <div className="text-right text-lg font-semibold">{formatCurrency(item.subtotal)}</div>
-                <button
-                  type="button"
-                  onClick={() => updateCartQuantity(item.id, 0)}
-                  className="inline-flex items-center gap-2 text-sm text-rose-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  移除
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingItem(item)
+                      setRemoveOpen(true)
+                    }}
+                    className="inline-flex items-center gap-2 text-sm text-rose-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    移除
                 </button>
               </div>
             </CardContent>
@@ -84,11 +92,46 @@ export default function CartPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <Button className="w-full rounded-full">去结算</Button>
-          <Button variant="secondary" className="w-full rounded-full" onClick={clearCart}>
+          <Button variant="secondary" className="w-full rounded-full" onClick={() => setClearOpen(true)}>
             清空购物车
           </Button>
         </CardFooter>
       </Card>
+
+      <ConfirmDialog
+        open={removeOpen}
+        title="确认移除商品"
+        description={`你正在从购物车移除「${pendingItem?.name || ''}」，确认后将立即生效。`}
+        confirmLabel="确认移除"
+        cancelLabel="取消"
+        destructive
+        onOpenChange={(open) => {
+          setRemoveOpen(open)
+          if (!open) {
+            setPendingItem(null)
+          }
+        }}
+        onConfirm={() => {
+          if (!pendingItem) return
+          updateCartQuantity(pendingItem.id, 0)
+          setRemoveOpen(false)
+          setPendingItem(null)
+        }}
+      />
+
+      <ConfirmDialog
+        open={clearOpen}
+        title="确认清空购物车"
+        description="清空后当前购物车里的所有商品都会被移除，此操作不可恢复。"
+        confirmLabel="确认清空"
+        cancelLabel="取消"
+        destructive
+        onOpenChange={setClearOpen}
+        onConfirm={() => {
+          clearCart()
+          setClearOpen(false)
+        }}
+      />
     </div>
   )
 }

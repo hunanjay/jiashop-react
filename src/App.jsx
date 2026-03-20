@@ -3,9 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AppContext } from './lib/app-context'
 import { api, setAuthToken } from './lib/api'
-import { formatCurrency } from './lib/format'
 import AdminLayout from './layouts/AdminLayout'
 import ClientLayout from './layouts/ClientLayout'
+import UserLayout from './layouts/UserLayout'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import ProductDetailPage from './pages/ProductDetailPage'
@@ -15,7 +15,7 @@ import AdminOrdersPage from './pages/admin/OrdersPage'
 import AdminProductsPage from './pages/admin/ProductManagerPage'
 import AdminRbacPage from './pages/admin/RbacPage'
 
-const CATEGORY_OPTIONS = [
+const DEFAULT_CATEGORY_OPTIONS = [
   { label: '全部分类', value: 'all' },
   { label: 'Awards', value: 'Awards' },
   { label: 'Stationery', value: 'Stationery' },
@@ -55,6 +55,7 @@ function AppProvider({ children }) {
   const [cart, setCart] = useState(loadCart)
   const [toasts, setToasts] = useState([])
   const [loadingAuth, setLoadingAuth] = useState(false)
+  const [categoryOptions, setCategoryOptions] = useState(DEFAULT_CATEGORY_OPTIONS)
 
   useEffect(() => {
     setAuthToken(session?.access_token || null)
@@ -93,9 +94,26 @@ function AppProvider({ children }) {
     }
   }, [pushToast])
 
+  const loadProductCategories = useCallback(async () => {
+    try {
+      const response = await api.get('/product-categories')
+      const categories = response.data || []
+      setCategoryOptions([
+        { label: '全部分类', value: 'all' },
+        ...categories.map((item) => ({ label: item.name, value: item.name })),
+      ])
+    } catch {
+      setCategoryOptions(DEFAULT_CATEGORY_OPTIONS)
+    }
+  }, [])
+
   useEffect(() => {
     loadProducts()
   }, [loadProducts])
+
+  useEffect(() => {
+    loadProductCategories()
+  }, [loadProductCategories])
 
   const login = useCallback(async (username, password) => {
     setLoadingAuth(true)
@@ -109,6 +127,7 @@ function AppProvider({ children }) {
         email: response.data.email,
         user: response.data.user,
       }
+      setAuthToken(nextSession.access_token)
       setSession(nextSession)
       pushToast('success', '登录成功', `欢迎回来，${nextSession.username}`)
       return nextSession
@@ -172,8 +191,8 @@ function AppProvider({ children }) {
     [cartItems],
   )
 
-  const isAdmin = Boolean(session && ['Admin', 'SuperAdmin'].includes(session.role))
-  const isSuperAdmin = Boolean(session && session.role === 'SuperAdmin')
+  const isAdmin = Boolean(session && ['admin', 'superadmin'].includes(session.role))
+  const isSuperAdmin = Boolean(session && session.role === 'superadmin')
 
   const value = useMemo(
     () => ({
@@ -196,13 +215,13 @@ function AppProvider({ children }) {
       clearCart,
       toasts,
       pushToast,
-      categoryOptions: CATEGORY_OPTIONS,
+      categoryOptions,
+      reloadProductCategories: loadProductCategories,
       isAdmin,
       isSuperAdmin,
     }),
     [
       addToCart,
-      api,
       cart,
       cartCount,
       cartItems,
@@ -211,11 +230,14 @@ function AppProvider({ children }) {
       clearCart,
       isAdmin,
       isSuperAdmin,
+      categoryOptions,
       loadProducts,
+      loadProductCategories,
       loadingAuth,
       loadingProducts,
       login,
       logout,
+      products,
       pushToast,
       session,
       toasts,
@@ -252,9 +274,22 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
 
       <Route
+        path="/workspace"
+        element={
+          <RequireRole roles={['user', 'admin', 'superadmin']}>
+            <UserLayout />
+          </RequireRole>
+        }
+      >
+        <Route index element={<Navigate to="/workspace/my-products" replace />} />
+        <Route path="my-products" element={<AdminProductsPage scope="workspace" />} />
+        <Route path="my-orders" element={<AdminOrdersPage scope="workspace" />} />
+      </Route>
+
+      <Route
         path="/admin"
         element={
-          <RequireRole roles={['Admin', 'SuperAdmin']}>
+          <RequireRole roles={['admin', 'superadmin']}>
             <AdminLayout />
           </RequireRole>
         }
@@ -262,7 +297,14 @@ function AppRoutes() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="products" element={<AdminProductsPage />} />
         <Route path="orders" element={<AdminOrdersPage />} />
-        <Route path="rbac" element={<AdminRbacPage />} />
+        <Route
+          path="rbac"
+          element={
+            <RequireRole roles={['superadmin']}>
+              <AdminRbacPage />
+            </RequireRole>
+          }
+        />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -279,5 +321,3 @@ export default function App() {
     </AppProvider>
   )
 }
-
-export { formatCurrency }

@@ -18,7 +18,9 @@ export default function LoginPage() {
     event.preventDefault()
 
     const session = await login(username, password)
-    const destination = location.state?.from?.pathname || (session.role === 'Guest' ? '/' : '/admin')
+    const destination =
+      location.state?.from?.pathname ||
+      (session.role === 'user' ? '/workspace/my-products' : session.role === 'guest' ? '/' : '/admin')
     navigate(destination, { replace: true })
   }
 
@@ -46,7 +48,7 @@ export default function LoginPage() {
               {[
                 ['客户侧', '沉浸、极简、转化导向'],
                 ['管理侧', '紧凑、功能性、快速操作'],
-                ['权限隔离', 'Guest / Admin / SuperAdmin'],
+                ['权限隔离', 'guest / user / admin / superadmin'],
               ].map(([title, desc]) => (
                 <div key={title} className="rounded-3xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur-xl">
                   <div className="text-sm font-semibold text-slate-900">{title}</div>

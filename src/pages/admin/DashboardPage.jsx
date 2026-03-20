@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { formatCurrency } from '../../lib/format'
 
 export default function DashboardPage() {
-  const { products } = useApp()
+  const { products, isSuperAdmin } = useApp()
   const [orders, setOrders] = useState([])
   const [users, setUsers] = useState([])
 
@@ -15,7 +15,7 @@ export default function DashboardPage() {
     let mounted = true
     Promise.all([
       api.get('/admin/orders').then((res) => res.data).catch(() => []),
-      api.get('/admin/users').then((res) => res.data).catch(() => []),
+      isSuperAdmin ? api.get('/admin/users').then((res) => res.data).catch(() => []) : Promise.resolve([]),
     ]).then(([orderData, userData]) => {
       if (!mounted) return
       setOrders(orderData)
@@ -25,7 +25,7 @@ export default function DashboardPage() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [isSuperAdmin])
 
   const stats = [
     { label: '商品总数', value: products.length, icon: Package },
@@ -80,7 +80,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-4">
             <PanelItem label="处理中订单" value={orders.filter((order) => order.status === 'Processing').length} />
             <PanelItem label="待发货订单" value={orders.filter((order) => order.status === 'Pending').length} />
-            <PanelItem label="超级管理员" value={users.filter((user) => user.role === 'SuperAdmin').length} />
+    <PanelItem label="超级管理员" value={users.filter((user) => user.role === 'superadmin').length} />
           </CardContent>
         </Card>
       </div>

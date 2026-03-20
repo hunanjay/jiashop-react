@@ -1,16 +1,76 @@
-import { Outlet, Link, NavLink } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Outlet, Link, NavLink, useNavigate } from 'react-router-dom'
 import { Home, ShoppingBag, User2, Search, ShoppingCart, Menu } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
+import { api } from '../lib/api'
+import { formatCurrency } from '../lib/format'
+import { useDebounce } from '../lib/useDebounce'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
 
 export default function ClientLayout() {
   const { session, cartCount, catalogQuery, setCatalogQuery } = useApp()
+  const navigate = useNavigate()
+  const debouncedQuery = useDebounce(catalogQuery, 300)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchResults, setSearchResults] = useState([])
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const [searchLoading, setSearchLoading] = useState(false)
+
+  useEffect(() => {
+    const query = debouncedQuery.trim()
+    if (!query) {
+      return
+    }
+
+    let mounted = true
+    api
+      .get('/products/search', { params: { q: query } })
+      .then((response) => {
+        if (!mounted) return
+        setSearchResults(response.data || [])
+        setActiveIndex(response.data?.length ? 0 : -1)
+      })
+      .catch(() => {
+        if (mounted) setSearchResults([])
+      })
+      .finally(() => {
+        if (mounted) setSearchLoading(false)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [debouncedQuery])
+
+  const hasPreview = searchOpen && debouncedQuery.trim().length > 0
+  const activeProduct = useMemo(() => searchResults[activeIndex] || null, [searchResults, activeIndex])
+
+  const handleSearchKeyDown = (event) => {
+    if (!hasPreview) return
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActiveIndex((current) => Math.min(current + 1, searchResults.length - 1))
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveIndex((current) => Math.max(current - 1, 0))
+    }
+    if (event.key === 'Enter' && activeProduct) {
+      event.preventDefault()
+      navigate(`/product/${activeProduct.id}`)
+      setSearchOpen(false)
+    }
+    if (event.key === 'Escape') {
+      setSearchOpen(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.96),_rgba(244,247,250,1)_36%,_rgba(232,236,243,1)_100%)] text-slate-900">
+      {hasPreview ? <div className="fixed inset-0 z-30 bg-slate-950/20 backdrop-blur-[2px]" onClick={() => setSearchOpen(false)} /> : null}
       <header className="sticky top-0 z-40 border-b border-white/70 bg-white/55 backdrop-blur-2xl">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
@@ -28,11 +88,63 @@ export default function ClientLayout() {
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={catalogQuery}
-                onChange={(event) => setCatalogQuery(event.target.value)}
+                onFocus={() => {
+                  setSearchOpen(true)
+                  setSearchLoading(Boolean(debouncedQuery.trim()))
+                }}
+                onChange={(event) => {
+                  const nextValue = event.target.value
+                  setCatalogQuery(nextValue)
+                  setSearchOpen(true)
+                  setSearchLoading(Boolean(nextValue.trim()))
+                }}
+                onKeyDown={handleSearchKeyDown}
                 placeholder="搜索礼品、分类、定制方式"
                 className="h-12 rounded-full border-white/70 bg-white/80 pl-11 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-xl"
               />
-            </div>
+              {hasPreview ? (
+                <div className="absolute left-0 right-0 top-[calc(100%+12px)] z-40 overflow-hidden rounded-[28px] border border-white/70 bg-white/80 shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+                  <div className="border-b border-slate-200/80 px-5 py-3 text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
+                    {searchLoading ? '搜索中...' : '搜索预览'}
+                  </div>
+                  <div className="max-h-[420px] overflow-auto p-2">
+                    {searchResults.length ? (
+                      searchResults.map((product, index) => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onMouseEnter={() => setActiveIndex(index)}
+                          onClick={() => {
+                            setSearchOpen(false)
+                            navigate(`/product/${product.id}`)
+                          }}
+                          className={[
+                            'flex w-full items-center gap-4 rounded-3xl p-3 text-left transition',
+                            index === activeIndex ? 'bg-slate-900 text-white' : 'hover:bg-slate-100',
+                          ].join(' ')}
+                        >
+                          <img src={product.image_url} alt={product.name} className="h-16 w-16 rounded-2xl object-cover" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <div className="truncate text-sm font-semibold">{product.name}</div>
+                              <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
+                                {product.category || 'Uncategorized'}
+                              </span>
+                            </div>
+                            <div className="mt-1 line-clamp-1 text-sm opacity-75">{product.description}</div>
+                          </div>
+                          <div className="text-sm font-semibold">{formatCurrency(product.price)}</div>
+                        </button>
+                      ))
+                    ) : searchLoading ? (
+                      <div className="p-5 text-sm text-slate-500">正在查找匹配商品...</div>
+                    ) : (
+                      <div className="p-5 text-sm text-slate-500">没有找到匹配结果</div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+              </div>
           </div>
 
           <div className="hidden items-center gap-3 md:flex">

@@ -1,11 +1,23 @@
 import { useMemo, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { BarChart3, ChevronRight, LogOut, Menu, Package, ReceiptText, ShieldCheck, PanelLeftClose, PanelLeftOpen, Bell, Search, LayoutDashboard, Users } from 'lucide-react'
+import {
+  ChevronRight,
+  LogOut,
+  Menu,
+  Package,
+  ReceiptText,
+  ShieldCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Bell,
+  Search,
+  LayoutDashboard,
+} from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
-import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
+import { ConfirmDialog } from '../components/ui/confirm-dialog'
 
 const navigation = [
   { label: '看板', to: '/admin', icon: LayoutDashboard },
@@ -15,8 +27,9 @@ const navigation = [
 ]
 
 export default function AdminLayout() {
-  const { session, logout, catalogQuery, setCatalogQuery } = useApp()
+  const { session, logout, catalogQuery, setCatalogQuery, isSuperAdmin } = useApp()
   const [collapsed, setCollapsed] = useState(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -64,6 +77,9 @@ export default function AdminLayout() {
 
             <nav className="flex-1 space-y-2 p-4">
               {navigation.map((item) => {
+                if (item.to === '/admin/rbac' && !isSuperAdmin) {
+                  return null
+                }
                 const Icon = item.icon
                 return (
                   <NavLink
@@ -144,10 +160,7 @@ export default function AdminLayout() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    logout()
-                    navigate('/login')
-                  }}
+                  onClick={() => setLogoutConfirmOpen(true)}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
                 >
                   <LogOut className="h-4 w-4" />
@@ -166,7 +179,11 @@ export default function AdminLayout() {
                       <SheetTitle>管理菜单</SheetTitle>
                     </SheetHeader>
                     <div className="space-y-3 p-5">
-                      {navigation.map((item) => (
+                      {navigation.map((item) => {
+                        if (item.to === '/admin/rbac' && !isSuperAdmin) {
+                          return null
+                        }
+                        return (
                         <NavLink
                           key={item.to}
                           to={item.to}
@@ -177,11 +194,12 @@ export default function AdminLayout() {
                               isActive ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 shadow-sm',
                             ].join(' ')
                           }
-                        >
-                          <item.icon className="h-4 w-4" />
-                          {item.label}
-                        </NavLink>
-                      ))}
+                          >
+                            <item.icon className="h-4 w-4" />
+                            {item.label}
+                          </NavLink>
+                        )
+                      })}
                     </div>
                   </SheetContent>
                 </Sheet>
@@ -194,6 +212,21 @@ export default function AdminLayout() {
           </main>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        title="确认退出登录"
+        description="退出后将返回登录页，当前会话会被清除。"
+        confirmLabel="确认退出"
+        cancelLabel="取消"
+        destructive
+        onOpenChange={setLogoutConfirmOpen}
+        onConfirm={() => {
+          logout()
+          setLogoutConfirmOpen(false)
+          navigate('/login')
+        }}
+      />
     </div>
   )
 }
