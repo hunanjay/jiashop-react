@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Edit3, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 
 import { api } from '../../lib/api'
 import { useApp } from '../../lib/app-context'
 import { Button } from '../../components/ui/button'
-import { Badge } from '../../components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
 import { Textarea } from '../../components/ui/textarea'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '../../components/ui/sheet'
+import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '../../components/ui/modal'
 import { ConfirmDialog } from '../../components/ui/confirm-dialog'
-import { formatCurrency } from '../../lib/format'
+import { FileUploadField } from '../../components/ui/file-upload'
+import ProductManagerToolbar from './product-manager/ProductManagerToolbar'
+import ProductManagerGrid from './product-manager/ProductManagerGrid'
+import ProductManagerCategoryModal from './product-manager/ProductManagerCategoryModal'
 
 const EMPTY_FORM = {
   id: null,
@@ -25,7 +24,7 @@ const EMPTY_FORM = {
 }
 
 export default function ProductManagerPage({ scope = 'admin' }) {
-  const { products, reloadProducts, reloadProductCategories, pushToast, categoryOptions, isAdmin } = useApp()
+  const { products, reloadProducts, reloadProductCategories, pushToast, isAdmin } = useApp()
   const [workspaceProducts, setWorkspaceProducts] = useState([])
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [categoryCatalog, setCategoryCatalog] = useState([])
@@ -36,8 +35,9 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   const [categoryPendingAction, setCategoryPendingAction] = useState(null)
   const [categoryConfirmOpen, setCategoryConfirmOpen] = useState(false)
   const [categorySaving, setCategorySaving] = useState(false)
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('all')
+  const [activeCategory, setActiveCategory] = useState('All Products')
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
@@ -48,31 +48,75 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   const [pendingSavePayload, setPendingSavePayload] = useState(null)
 
   const visibleProducts = scope === 'workspace' ? workspaceProducts : products
-  const canCustomCategory = scope === 'admin' && isAdmin
 
-  const categories = useMemo(
-    () => ['all', ...new Set(visibleProducts.map((product) => product.category).filter(Boolean))],
-    [visibleProducts],
-  )
+  const tabs = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(visibleProducts.map((product) => product.category).filter(Boolean)))
+    return [
+      {
+        label: 'All Products',
+        value: 'All Products',
+        count: visibleProducts.length,
+      },
+      {
+        label: 'Most Purchased',
+        value: 'Most Purchased',
+        count: visibleProducts.filter((product) => Number(product.sales_count || 0) > 0).length,
+      },
+      ...uniqueCategories.map((category) => ({
+        label: category,
+        value: category,
+        count: visibleProducts.filter((product) => product.category === category).length,
+      })),
+    ]
+  }, [visibleProducts])
 
-  const workspaceCategoryOptions = useMemo(() => {
-    const activeOptions = categoryOptions.filter((item) => item.value !== 'all')
-    if (scope !== 'workspace' || !form.category) {
-      return activeOptions
+  const categorySelectOptions = useMemo(() => {
+    const sortedCategories = [...categoryCatalog].sort((left, right) => left.sort_order - right.sort_order || left.name.localeCompare(right.name))
+    if (!form.category) {
+      return sortedCategories
     }
-    if (activeOptions.some((item) => item.value === form.category)) {
-      return activeOptions
+    if (sortedCategories.some((item) => item.name === form.category)) {
+      return sortedCategories
     }
-    return [...activeOptions, { label: form.category, value: form.category }]
-  }, [categoryOptions, form.category, scope])
+    return [...sortedCategories, { id: '__current__', name: form.category, sort_order: 0, active: true }]
+  }, [categoryCatalog, form.category])
 
   const filteredProducts = useMemo(() => {
-    return visibleProducts.filter((product) => {
-      const matchesSearch = `${product.name} ${product.description || ''}`.toLowerCase().includes(search.toLowerCase())
-      const matchesCategory = category === 'all' || product.category === category
+    const query = search.trim().toLowerCase()
+    const next = visibleProducts.filter((product) => {
+      const matchesSearch = `${product.name} ${product.description || ''} ${product.category || ''}`
+        .toLowerCase()
+        .includes(query)
+      const matchesCategory =
+        activeCategory === 'All Products' ||
+        activeCategory === 'Most Purchased' ||
+        product.category === activeCategory
       return matchesSearch && matchesCategory
     })
-  }, [visibleProducts, search, category])
+
+    if (activeCategory === 'Most Purchased') {
+      return [...next].sort((left, right) => Number(right.sales_count || 0) - Number(left.sales_count || 0))
+    }
+
+    return next
+  }, [activeCategory, search, visibleProducts])
+
+  const refreshVisibleProducts = useCallback(async () => {
+    if (scope === 'workspace') {
+      setWorkspaceLoading(true)
+      try {
+        const response = await api.get('/workspace/products')
+        setWorkspaceProducts(response.data || [])
+      } catch {
+        pushToast('error', '商品加载失败')
+      } finally {
+        setWorkspaceLoading(false)
+      }
+      return
+    }
+
+    await reloadProducts()
+  }, [pushToast, reloadProducts, scope])
 
   const refreshCategoryCatalog = useCallback(async () => {
     setCategoryLoading(true)
@@ -93,26 +137,8 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   }, [reloadProductCategories])
 
   useEffect(() => {
-    if (scope !== 'workspace') return
-
-    let mounted = true
-    setWorkspaceLoading(true)
-    api
-      .get('/workspace/products')
-      .then((response) => {
-        if (mounted) setWorkspaceProducts(response.data || [])
-      })
-      .catch(() => {
-        if (mounted) pushToast('error', '商品加载失败')
-      })
-      .finally(() => {
-        if (mounted) setWorkspaceLoading(false)
-      })
-
-    return () => {
-      mounted = false
-    }
-  }, [scope, pushToast])
+    refreshVisibleProducts()
+  }, [refreshVisibleProducts])
 
   useEffect(() => {
     if (scope !== 'admin') return
@@ -123,7 +149,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
 
   const openCreateDrawer = () => {
     setSelectedId(null)
-    const defaultCategory = (categoryOptions.find((item) => item.value !== 'all') || {}).value || ''
+    const defaultCategory = categoryCatalog.find((item) => item.active)?.name || categoryCatalog[0]?.name || ''
     setForm({
       ...EMPTY_FORM,
       category: defaultCategory,
@@ -140,7 +166,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       price: String(product.price || ''),
       stock: String(product.stock || ''),
       image_url: product.image_url || '',
-      category: product.category || (categoryOptions.find((item) => item.value !== 'all') || {}).value || '',
+      category: product.category || categoryCatalog.find((item) => item.active)?.name || categoryCatalog[0]?.name || '',
       customization: JSON.stringify(product.customization || {}, null, 2),
     })
     setDrawerOpen(true)
@@ -195,12 +221,14 @@ export default function ProductManagerPage({ scope = 'admin' }) {
         await api.post('/products', pendingSavePayload)
         pushToast('success', '商品已创建')
       }
+
       if (scope === 'admin') {
         await refreshCategoryCatalog()
       } else {
         await reloadProductCategories()
       }
-      await (scope === 'workspace' ? api.get('/workspace/products').then((response) => setWorkspaceProducts(response.data || [])) : reloadProducts())
+
+      await refreshVisibleProducts()
       closeDrawer()
       setSaveConfirmOpen(false)
       setPendingSavePayload(null)
@@ -281,7 +309,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       }
 
       await refreshCategoryCatalog()
-      await reloadProducts()
+      await refreshVisibleProducts()
       setCategoryConfirmOpen(false)
       setCategoryPendingAction(null)
       setNewCategoryName('')
@@ -294,297 +322,160 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   }
 
   return (
-    <div className="space-y-5">
-      <Card className="border-slate-200 bg-white shadow-sm">
-        <CardHeader className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle>商品管理</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={scope === 'workspace' ? () => api.get('/workspace/products').then((response) => setWorkspaceProducts(response.data || [])) : reloadProducts}>
-                <RefreshCw className="h-4 w-4" />
-                刷新
-              </Button>
-              <Button onClick={openCreateDrawer}>
-                <Plus className="h-4 w-4" />
-                新增商品
-              </Button>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <ProductManagerToolbar
+        tabs={tabs}
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+        search={search}
+        setSearch={setSearch}
+        onOpenCategoryModal={() => setCategoryModalOpen(true)}
+        onRefresh={refreshVisibleProducts}
+        onCreate={openCreateDrawer}
+      />
 
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div className="relative w-full max-w-2xl">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="搜索商品名称、描述"
-                className="pl-11"
-              />
-            </div>
-
-            <select
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm"
-            >
-              {categories.map((item) => (
-                <option key={item} value={item}>
-                  {item === 'all' ? '全部分类' : item}
-                </option>
-              ))}
-            </select>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>商品</TableHead>
-                <TableHead>分类</TableHead>
-                <TableHead>价格</TableHead>
-                <TableHead>库存</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(scope === 'workspace' ? workspaceLoading : false) ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-slate-500">
-                    加载中...
-                  </TableCell>
-                </TableRow>
-              ) : filteredProducts.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <img src={product.image_url} alt={product.name} className="h-14 w-14 rounded-2xl object-cover" />
-                      <div>
-                        <div className="font-medium text-slate-900">{product.name}</div>
-                        <div className="line-clamp-1 text-sm text-slate-500">{product.description}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{product.category}</TableCell>
-                  <TableCell>{formatCurrency(product.price)}</TableCell>
-                  <TableCell>{product.stock}</TableCell>
-                  <TableCell>
-                    <Badge variant={product.stock <= 3 ? 'destructive' : 'secondary'}>
-                      {product.stock <= 3 ? '库存紧张' : product.stock <= 10 ? '库存关注' : '库存充足'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => openEditDrawer(product)}>
-                        <Edit3 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => requestDeleteProduct(product)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <ProductManagerGrid
+          products={filteredProducts}
+          loading={scope === 'workspace' ? workspaceLoading : false}
+          onEdit={openEditDrawer}
+          onDelete={requestDeleteProduct}
+          onReset={() => {
+            setSearch('')
+            setActiveCategory('All Products')
+          }}
+        />
+      </div>
 
       {scope === 'admin' && isAdmin ? (
-        <Card className="border-slate-200 bg-white shadow-sm">
-          <CardHeader className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle>类型字典</CardTitle>
-              <Badge variant="outline">仅 Admin / SuperAdmin</Badge>
-            </div>
-            <div className="grid gap-3 lg:grid-cols-[1fr_120px_auto]">
-              <Input
-                value={newCategoryName}
-                onChange={(event) => setNewCategoryName(event.target.value)}
-                placeholder="输入新类型名称"
-              />
-              <Input
-                type="number"
-                value={newCategorySort}
-                onChange={(event) => setNewCategorySort(event.target.value)}
-                placeholder="排序"
-              />
-              <Button onClick={requestCreateCategory}>
-                <Plus className="h-4 w-4" />
-                新增类型
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-3">
-            {categoryLoading ? (
-              <div className="py-6 text-sm text-slate-500">正在加载类型字典...</div>
-            ) : categoryCatalog.length ? (
-              categoryCatalog.map((item) => {
-                const draft = categoryDrafts[item.id] || { name: item.name, sort_order: item.sort_order, active: item.active }
-                return (
-                  <div key={item.id} className="grid gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_120px_120px_auto]">
-                    <Input
-                      value={draft.name}
-                      onChange={(event) =>
-                        setCategoryDrafts((current) => ({
-                          ...current,
-                          [item.id]: { ...draft, name: event.target.value },
-                        }))
-                      }
-                      placeholder="类型名称"
-                    />
-                    <Input
-                      type="number"
-                      value={draft.sort_order}
-                      onChange={(event) =>
-                        setCategoryDrafts((current) => ({
-                          ...current,
-                          [item.id]: { ...draft, sort_order: event.target.value },
-                        }))
-                      }
-                      placeholder="排序"
-                    />
-                    <div className="flex items-center justify-center">
-                      <Badge variant={item.active ? 'default' : 'secondary'}>{item.active ? '启用' : '停用'}</Badge>
-                    </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="secondary"
-                        onClick={() => requestToggleCategory({ ...item, active: item.active })}
-                      >
-                        {item.active ? '停用' : '启用'}
-                      </Button>
-                      <Button onClick={() => requestUpdateCategory(item)}>保存</Button>
-                    </div>
-                  </div>
-                )
-              })
-            ) : (
-              <div className="py-6 text-sm text-slate-500">还没有类型字典。</div>
-            )}
-          </CardContent>
-        </Card>
+        <ProductManagerCategoryModal
+          open={categoryModalOpen}
+          onOpenChange={setCategoryModalOpen}
+          categoryLoading={categoryLoading}
+          categoryCatalog={categoryCatalog}
+          categoryDrafts={categoryDrafts}
+          setCategoryDrafts={setCategoryDrafts}
+          newCategoryName={newCategoryName}
+          setNewCategoryName={setNewCategoryName}
+          newCategorySort={newCategorySort}
+          setNewCategorySort={setNewCategorySort}
+          onCreateCategory={requestCreateCategory}
+          onUpdateCategory={requestUpdateCategory}
+          onToggleCategory={requestToggleCategory}
+        />
       ) : null}
 
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="right">
-          <SheetHeader>
+      <Modal open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <ModalContent className="max-w-6xl border-white/10 bg-[#111114]/96 text-zinc-100 shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
+          <ModalHeader className="border-b border-white/10 bg-white/5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <SheetTitle>{selectedId ? '编辑商品' : '新增商品'}</SheetTitle>
-                <SheetDescription className="mt-2">
-                  点击确认按钮保存，表单会在右侧抽屉中完成编辑，不会打断当前页面上下文。
-                </SheetDescription>
+                <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">
+                  {selectedId ? '编辑商品' : '新增商品'}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">
+                  在这里完成商品信息编辑，保存前会再确认一次。
+                </p>
               </div>
               <Button onClick={requestSaveProduct} disabled={saving}>
                 {saving ? '保存中...' : '确认保存'}
               </Button>
             </div>
-          </SheetHeader>
+          </ModalHeader>
 
-          <SheetBody>
-            <div className="space-y-4">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">商品名称</span>
-                <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-              </label>
+          <ModalBody>
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+              <div className="space-y-4">
+                <FileUploadField
+                  label="商品图片"
+                  value={form.image_url}
+                  onChange={(nextValue) => setForm((current) => ({ ...current, image_url: nextValue }))}
+                  helperText="选择图片后会直接转成前端字符串并实时预览"
+                />
 
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">商品类型</span>
-                {canCustomCategory ? (
-                  <>
-                    <Input
-                      list="product-category-options"
+                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-xl">
+                  <div className="text-sm font-semibold text-white">商品摘要</div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">名称</div>
+                      <div className="mt-1 truncate text-sm font-semibold text-white">{form.name || '未填写'}</div>
+                    </div>
+                    <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">分类</div>
+                      <div className="mt-1 truncate text-sm font-semibold text-white">{form.category || '未选择'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-[1.2fr_0.8fr]">
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-zinc-300">商品名称</span>
+                    <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-zinc-300">商品类型</span>
+                    <select
                       value={form.category}
                       onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
-                      placeholder="输入自定义类型，如 Premium Gifts"
-                    />
-                    <datalist id="product-category-options">
-                      {[...categoryCatalog]
-                        .sort((left, right) => left.sort_order - right.sort_order || left.name.localeCompare(right.name))
-                        .map((item) => (
-                          <option key={item.id} value={item.name} />
-                        ))}
-                    </datalist>
-                  </>
-                ) : (
-                  <select
-                    value={form.category}
-                    onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
-                    className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm"
-                  >
-                    <option value="">请选择类型</option>
-                    {workspaceCategoryOptions
-                      .map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
+                      className="h-11 w-full rounded-2xl border border-white/10 bg-white/6 px-4 text-sm text-white backdrop-blur-xl"
+                    >
+                      <option value="">请选择类型</option>
+                      {categorySelectOptions.map((item) => (
+                        <option key={item.id} value={item.name}>
+                          {item.name}
                         </option>
                       ))}
-                  </select>
-                )}
-              </label>
+                    </select>
+                  </label>
+                </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-zinc-300">价格</span>
+                    <Input type="number" value={form.price} onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))} />
+                  </label>
+                  <label className="block space-y-2">
+                    <span className="text-sm font-medium text-zinc-300">库存</span>
+                    <Input type="number" value={form.stock} onChange={(event) => setForm((current) => ({ ...current, stock: event.target.value }))} />
+                  </label>
+                </div>
+
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-slate-700">价格</span>
-                  <Input
-                    type="number"
-                    value={form.price}
-                    onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
+                  <span className="text-sm font-medium text-zinc-300">商品描述</span>
+                  <Textarea
+                    value={form.description}
+                    onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+                    rows={3}
                   />
                 </label>
+
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-slate-700">库存</span>
-                  <Input
-                    type="number"
-                    value={form.stock}
-                    onChange={(event) => setForm((current) => ({ ...current, stock: event.target.value }))}
+                  <span className="text-sm font-medium text-zinc-300">自定义 JSON</span>
+                  <Textarea
+                    value={form.customization}
+                    onChange={(event) => setForm((current) => ({ ...current, customization: event.target.value }))}
+                    rows={4}
                   />
                 </label>
               </div>
-
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">图片链接</span>
-                <Input
-                  value={form.image_url}
-                  onChange={(event) => setForm((current) => ({ ...current, image_url: event.target.value }))}
-                />
-              </label>
-
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">商品描述</span>
-                <Textarea
-                  value={form.description}
-                  onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                  rows={3}
-                />
-              </label>
-
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">自定义 JSON</span>
-                <Textarea
-                  value={form.customization}
-                  onChange={(event) => setForm((current) => ({ ...current, customization: event.target.value }))}
-                  rows={4}
-                />
-              </label>
             </div>
-          </SheetBody>
+          </ModalBody>
 
-          <SheetFooter>
+          <ModalFooter className="border-t border-white/10 bg-white/5">
             <div className="flex items-center justify-end gap-3">
-              <Button variant="secondary" onClick={closeDrawer}>
+              <Button variant="secondary" onClick={closeDrawer} className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10">
                 取消
               </Button>
               <Button onClick={requestSaveProduct} disabled={saving}>
                 {saving ? '保存中...' : '确认保存'}
               </Button>
             </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <ConfirmDialog
         open={saveConfirmOpen}
@@ -626,9 +517,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
           try {
             await api.delete(`/products/${pendingDelete.id}`)
             pushToast('success', '商品已删除')
-            scope === 'workspace'
-              ? api.get('/workspace/products').then((response) => setWorkspaceProducts(response.data || []))
-              : reloadProducts()
+            await refreshVisibleProducts()
             setDeleteConfirmOpen(false)
             setPendingDelete(null)
             if (selectedId === pendingDelete.id) {

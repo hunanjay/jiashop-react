@@ -8,8 +8,9 @@ import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '../../components/ui/sheet'
+import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '../../components/ui/modal'
 import { ConfirmDialog } from '../../components/ui/confirm-dialog'
+import { FileUploadField } from '../../components/ui/file-upload'
 import { formatCurrency, formatDateTime } from '../../lib/format'
 
 const STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled']
@@ -17,6 +18,12 @@ const STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancel
 const EMPTY_FORM = {
   id: null,
   customer_name: '',
+  customer_id: '',
+  customer_phone: '',
+  shipping_address: '',
+  custom_logo_url: '',
+  design_file_url: '',
+  remarks: '',
   total_price: '',
   status: 'Pending',
   items: [{ product_id: '', product_name: '', product_query: '', qty: 1 }],
@@ -38,6 +45,9 @@ export default function OrdersPage({ scope = 'admin' }) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [pendingSavePayload, setPendingSavePayload] = useState(null)
+  const [detailOrder, setDetailOrder] = useState(null)
+  const [timeline, setTimeline] = useState([])
+  const [noteDraft, setNoteDraft] = useState('')
 
   const loadOrders = useCallback(async () => {
     setLoading(true)
@@ -99,6 +109,12 @@ export default function OrdersPage({ scope = 'admin' }) {
     setForm({
       id: order.id,
       customer_name: order.customer_name || '',
+      customer_id: order.customer_id || '',
+      customer_phone: order.customer_phone || '',
+      shipping_address: order.shipping_address || '',
+      custom_logo_url: order.custom_logo_url || '',
+      design_file_url: order.design_file_url || '',
+      remarks: order.remarks || '',
       total_price: String(order.total_price || ''),
       status: order.status || 'Pending',
       items: Array.isArray(order.items)
@@ -140,6 +156,12 @@ export default function OrdersPage({ scope = 'admin' }) {
 
     return {
       customer_name: form.customer_name.trim(),
+      customer_id: form.customer_id.trim(),
+      customer_phone: form.customer_phone.trim(),
+      shipping_address: form.shipping_address.trim(),
+      custom_logo_url: form.custom_logo_url.trim(),
+      design_file_url: form.design_file_url.trim(),
+      remarks: form.remarks.trim(),
       total_price: Number(form.total_price || 0),
       status: form.status,
       items,
@@ -182,6 +204,31 @@ export default function OrdersPage({ scope = 'admin' }) {
     setDeleteConfirmOpen(true)
   }
 
+  const openDetail = async (order) => {
+    setDetailOrder(order)
+    setTimeline([])
+    setNoteDraft(order.remarks || '')
+    try {
+      const response = await api.get(`/admin/orders/${order.id}/timeline`)
+      setTimeline(response.data || [])
+    } catch {
+      pushToast('error', '时间线加载失败')
+    }
+  }
+
+  const saveNote = async () => {
+    if (!detailOrder || !noteDraft.trim()) return
+    try {
+      await api.post(`/admin/orders/${detailOrder.id}/note`, { note: noteDraft.trim() })
+      pushToast('success', '备注已更新')
+      await refreshOrders()
+      const response = await api.get(`/admin/orders/${detailOrder.id}/timeline`)
+      setTimeline(response.data || [])
+    } catch {
+      pushToast('error', '备注保存失败')
+    }
+  }
+
   const updateItem = (index, nextItem) => {
     setForm((current) => ({
       ...current,
@@ -219,12 +266,12 @@ export default function OrdersPage({ scope = 'admin' }) {
 
   return (
     <div className="space-y-5">
-      <Card className="border-slate-200 bg-white shadow-sm">
+      <Card className="border-white/10 bg-white/6 text-zinc-100 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
         <CardHeader className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
-            <CardTitle>{scope === 'workspace' ? '我的订单' : '订单管理'}</CardTitle>
+            <CardTitle className="text-white">{scope === 'workspace' ? '我的订单' : '订单管理'}</CardTitle>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={refreshOrders}>
+              <Button variant="secondary" onClick={refreshOrders} className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10">
                 <RefreshCw className="h-4 w-4" />
                 刷新
               </Button>
@@ -236,8 +283,13 @@ export default function OrdersPage({ scope = 'admin' }) {
           </div>
 
           <div className="relative w-full max-w-2xl">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索订单号、客户或状态" className="pl-11" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="搜索订单号、客户或状态"
+              className="border-white/10 bg-white/6 pl-11 text-white placeholder:text-zinc-500"
+            />
           </div>
         </CardHeader>
 
@@ -256,14 +308,14 @@ export default function OrdersPage({ scope = 'admin' }) {
             <TableBody>
               {(scope === 'workspace' ? workspaceLoading : loading) ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-slate-500">
+                  <TableCell colSpan={6} className="py-10 text-center text-zinc-500">
                     加载中...
                   </TableCell>
                 </TableRow>
               ) : filteredOrders.length ? (
                 filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium text-slate-900">{order.id}</TableCell>
+                  <TableRow key={order.id} className="cursor-pointer" onClick={() => openDetail(order)}>
+                    <TableCell className="font-medium text-white">{order.id}</TableCell>
                     <TableCell>{order.customer_name}</TableCell>
                     <TableCell>
                       <Badge variant={order.status === 'Completed' ? 'default' : 'secondary'}>{order.status}</Badge>
@@ -272,10 +324,25 @@ export default function OrdersPage({ scope = 'admin' }) {
                     <TableCell>{formatDateTime(order.created_at)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => openEditDrawer(order)}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            openEditDrawer(order)
+                          }}
+                          className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10"
+                        >
                           <Edit3 className="h-4 w-4" />
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => requestDeleteOrder(order)}>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            requestDeleteOrder(order)
+                          }}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -284,7 +351,7 @@ export default function OrdersPage({ scope = 'admin' }) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-slate-500">
+                  <TableCell colSpan={6} className="py-10 text-center text-zinc-500">
                     暂无订单
                   </TableCell>
                 </TableRow>
@@ -294,59 +361,102 @@ export default function OrdersPage({ scope = 'admin' }) {
         </CardContent>
       </Card>
 
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="right">
-          <SheetHeader>
+      <Modal open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <ModalContent className="max-w-6xl border-white/10 bg-[#111114]/96 text-zinc-100 shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
+          <ModalHeader className="border-b border-white/10 bg-white/5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <SheetTitle>{selectedId ? '编辑订单' : '新增订单'}</SheetTitle>
-                <SheetDescription className="mt-2">
+                <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">{selectedId ? '编辑订单' : '新增订单'}</h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">
                   订单可以先录入客户、金额和商品明细，再点击确认进行二次提交。
-                </SheetDescription>
+                </p>
               </div>
               <Button onClick={requestSaveOrder} disabled={saving}>
                 {saving ? '保存中...' : '确认保存'}
               </Button>
             </div>
-          </SheetHeader>
+          </ModalHeader>
 
-          <SheetBody>
-            <div className="space-y-4">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">客户名称</span>
-                <Input value={form.customer_name} onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))} />
-              </label>
+          <ModalBody>
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+              <div className="space-y-4">
+                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-xl">
+                  <div className="text-sm font-semibold text-white">订单基础信息</div>
+                  <div className="mt-4 space-y-4">
+                    <label className="block space-y-2">
+                      <span className="text-sm font-medium text-zinc-300">客户名称</span>
+                      <Input value={form.customer_name} onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))} />
+                    </label>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block space-y-2">
-                  <span className="text-sm font-medium text-slate-700">总金额</span>
-                  <Input type="number" value={form.total_price} onChange={(event) => setForm((current) => ({ ...current, total_price: event.target.value }))} />
-                </label>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block space-y-2">
+                        <span className="text-sm font-medium text-zinc-300">客户 ID</span>
+                        <Input value={form.customer_id} onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))} />
+                      </label>
+                      <label className="block space-y-2">
+                        <span className="text-sm font-medium text-zinc-300">客户电话</span>
+                        <Input value={form.customer_phone} onChange={(event) => setForm((current) => ({ ...current, customer_phone: event.target.value }))} />
+                      </label>
+                    </div>
 
-                <label className="block space-y-2">
-                  <span className="text-sm font-medium text-slate-700">状态</span>
-                  <select
-                    value={form.status}
-                    onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
-                    className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm"
-                  >
-                    {STATUS_OPTIONS.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
+                    <label className="block space-y-2">
+                      <span className="text-sm font-medium text-zinc-300">发货地址</span>
+                      <Input value={form.shipping_address} onChange={(event) => setForm((current) => ({ ...current, shipping_address: event.target.value }))} />
+                    </label>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block space-y-2">
+                        <span className="text-sm font-medium text-zinc-300">总金额</span>
+                        <Input type="number" value={form.total_price} onChange={(event) => setForm((current) => ({ ...current, total_price: event.target.value }))} />
+                      </label>
+
+                      <label className="block space-y-2">
+                        <span className="text-sm font-medium text-zinc-300">状态</span>
+                        <select
+                          value={form.status}
+                          onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
+                          className="h-11 w-full rounded-2xl border border-white/10 bg-white/6 px-4 text-sm text-white backdrop-blur-xl"
+                        >
+                          {STATUS_OPTIONS.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FileUploadField
+                    label="Logo"
+                    value={form.custom_logo_url}
+                    onChange={(nextValue) => setForm((current) => ({ ...current, custom_logo_url: nextValue }))}
+                    helperText="前端转码后保存，适合直接贴到订单里"
+                  />
+                  <FileUploadField
+                    label="设计图"
+                    value={form.design_file_url}
+                    onChange={(nextValue) => setForm((current) => ({ ...current, design_file_url: nextValue }))}
+                    helperText="和 Logo 一样走前端转换，支持实时预览"
+                  />
+                </div>
+
+                <label className="block space-y-2 rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-xl">
+                  <span className="text-sm font-medium text-zinc-300">备注</span>
+                  <Input value={form.remarks} onChange={(event) => setForm((current) => ({ ...current, remarks: event.target.value }))} />
                 </label>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-xl">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">订单商品</span>
+                  <span className="text-sm font-semibold text-white">订单商品</span>
                   <div className="flex items-center gap-3">
                     <select
                       value={productTypeFilter}
                       onChange={(event) => setProductTypeFilter(event.target.value)}
-                      className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm"
+                      className="h-10 rounded-full border border-white/10 bg-white/6 px-4 text-sm text-white backdrop-blur-xl"
                     >
                       {productCategories.map((item) => (
                         <option key={item.value} value={item.value}>
@@ -354,21 +464,25 @@ export default function OrdersPage({ scope = 'admin' }) {
                         </option>
                       ))}
                     </select>
-                    <Button type="button" variant="secondary" onClick={addItem}>
+                    <Button type="button" variant="secondary" onClick={addItem} className="h-10 border-white/10 bg-white/6 px-3 text-zinc-200 hover:bg-white/10">
                       <Plus className="h-4 w-4" />
                       添加商品
                     </Button>
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-zinc-500">选择商品后会自动保留名称和分类</div>
+                </div>
+
+                <div className="space-y-3 max-h-[68vh] overflow-y-auto pr-1">
                   {form.items.map((item, index) => (
-                    <div key={index} className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div key={index} className="space-y-3 rounded-[20px] border border-white/10 bg-white/6 p-4 shadow-sm">
                       <div className="grid gap-3 sm:grid-cols-[1fr_120px_auto]">
                         <label className="block space-y-2">
-                          <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">商品搜索</span>
+                          <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">商品搜索</span>
                           <div className="relative">
-                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                             <Input
                               value={item.product_query}
                               onChange={(event) =>
@@ -387,7 +501,7 @@ export default function OrdersPage({ scope = 'admin' }) {
                         </label>
 
                         <label className="block space-y-2">
-                          <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">数量</span>
+                          <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">数量</span>
                           <Input
                             type="number"
                             min="1"
@@ -404,7 +518,7 @@ export default function OrdersPage({ scope = 'admin' }) {
                       </div>
 
                       {item.product_query?.trim() ? (
-                        <div className="space-y-2 rounded-3xl border border-white/80 bg-white/90 p-2 shadow-sm">
+                        <div className="space-y-2 rounded-[18px] border border-white/10 bg-white/5 p-2">
                           {matchProducts(item.product_query).length ? (
                             matchProducts(item.product_query).map((product) => (
                               <button
@@ -419,26 +533,26 @@ export default function OrdersPage({ scope = 'admin' }) {
                                     product_query: `${product.name} (${product.id})`,
                                   })
                                 }
-                                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-slate-100"
+                                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-white/10"
                               >
                                 <img src={product.image_url} alt={product.name} className="h-12 w-12 rounded-2xl object-cover" />
                                 <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-semibold text-slate-900">{product.name}</div>
-                                  <div className="mt-1 text-xs text-slate-500">
+                                  <div className="truncate text-sm font-semibold text-white">{product.name}</div>
+                                  <div className="mt-1 text-xs text-zinc-500">
                                     {product.id} · {product.category || 'Uncategorized'}
                                   </div>
                                 </div>
-                                <div className="text-sm font-semibold text-slate-900">{formatCurrency(product.price)}</div>
+                                <div className="text-sm font-semibold text-white">{formatCurrency(product.price)}</div>
                               </button>
                             ))
                           ) : (
-                            <div className="px-3 py-4 text-sm text-slate-500">没有匹配商品</div>
+                            <div className="px-3 py-4 text-sm text-zinc-500">没有匹配商品</div>
                           )}
                         </div>
                       ) : null}
 
                       {item.product_id ? (
-                        <div className="rounded-2xl bg-slate-900 px-3 py-2 text-sm text-white">
+                        <div className="rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400 px-3 py-2 text-sm text-white shadow-sm">
                           已选商品: {item.product_name || item.product_id}
                           {item.product_category ? ` · ${item.product_category}` : ''}
                         </div>
@@ -448,20 +562,20 @@ export default function OrdersPage({ scope = 'admin' }) {
                 </div>
               </div>
             </div>
-          </SheetBody>
+          </ModalBody>
 
-          <SheetFooter>
+          <ModalFooter className="border-t border-white/10 bg-white/5">
             <div className="flex items-center justify-end gap-3">
-              <Button variant="secondary" onClick={() => setDrawerOpen(false)}>
+              <Button variant="secondary" onClick={() => setDrawerOpen(false)} className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10">
                 取消
               </Button>
               <Button onClick={requestSaveOrder} disabled={saving}>
                 {saving ? '保存中...' : '确认保存'}
               </Button>
             </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <ConfirmDialog
         open={saveConfirmOpen}
@@ -513,6 +627,51 @@ export default function OrdersPage({ scope = 'admin' }) {
           }
         }}
       />
+
+      <Modal open={Boolean(detailOrder)} onOpenChange={(open) => !open && setDetailOrder(null)}>
+        <ModalContent className="max-w-2xl border-white/10 bg-[#111114]/96 text-zinc-100 shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
+          <ModalHeader className="border-b border-white/10 bg-white/5">
+            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">订单详情</h2>
+            <p className="mt-2 text-sm text-zinc-500">{detailOrder?.id}</p>
+          </ModalHeader>
+          <ModalBody className="space-y-5">
+            {detailOrder ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs text-zinc-500">客户</div>
+                    <div className="mt-1 font-medium text-white">{detailOrder.customer_name}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs text-zinc-500">状态</div>
+                    <div className="mt-1 font-medium text-white">{detailOrder.status}</div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs text-zinc-500">备注</div>
+                  <Input value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="输入跟进备注" />
+                  <div className="mt-3 flex justify-end">
+                    <Button onClick={saveNote}>保存备注</Button>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="text-sm font-semibold text-white">状态 / 备注记录</div>
+                  {timeline.length ? (
+                    timeline.map((item) => (
+                      <div key={item.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="text-sm font-medium text-white">{item.action}</div>
+                        <div className="mt-1 text-xs text-zinc-500">{formatDateTime(item.timestamp)}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-zinc-500">暂无记录</div>
+                  )}
+                </div>
+              </>
+            ) : null}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </div>
   )
 }

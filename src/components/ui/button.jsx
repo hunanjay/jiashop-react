@@ -5,16 +5,17 @@ import { cva } from 'class-variance-authority'
 import { cn } from '../../lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200/70 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200/80 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-slate-900 text-white shadow-lg shadow-slate-900/15 hover:-translate-y-0.5 hover:bg-slate-800',
+        default:
+          'bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-500 text-white shadow-[0_18px_40px_rgba(129,140,248,0.28)] hover:-translate-y-0.5 hover:brightness-105',
         secondary:
-          'border border-slate-200 bg-white text-slate-700 shadow-sm hover:-translate-y-0.5 hover:bg-slate-50',
-        ghost: 'bg-transparent text-slate-700 hover:bg-slate-100',
+          'border border-slate-200/80 bg-white/75 text-slate-800 shadow-sm backdrop-blur-xl hover:-translate-y-0.5 hover:bg-white',
+        ghost: 'bg-transparent text-slate-700 hover:bg-slate-100/80',
         destructive:
-          'border border-rose-200 bg-rose-50 text-rose-700 shadow-sm hover:-translate-y-0.5 hover:bg-rose-100',
+          'border border-rose-200 bg-rose-50/90 text-rose-700 shadow-sm hover:-translate-y-0.5 hover:bg-rose-100',
       },
       size: {
         default: 'h-11 px-4 py-2.5',

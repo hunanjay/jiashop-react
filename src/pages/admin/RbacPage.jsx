@@ -78,10 +78,10 @@ export default function RbacPage() {
   }
 
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
+    <Card className="border-white/10 bg-white/6 text-zinc-100 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
       <CardHeader className="flex flex-col gap-2">
-        <CardTitle>RBAC 权限设置</CardTitle>
-        <p className="text-sm text-slate-500">仅 SuperAdmin 可查看和修改用户角色。</p>
+        <CardTitle className="text-white">RBAC 权限设置</CardTitle>
+        <p className="text-sm text-zinc-500">仅 SuperAdmin 可查看和修改用户角色。</p>
       </CardHeader>
       <CardContent>
         <Table>
@@ -105,7 +105,7 @@ export default function RbacPage() {
             ) : users.length ? (
               users.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium text-slate-900">{user.username}</TableCell>
+                  <TableCell className="font-medium text-white">{user.username}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge variant={user.role === 'superadmin' ? 'default' : 'secondary'}>{user.role}</Badge>
@@ -119,7 +119,7 @@ export default function RbacPage() {
                           [user.id]: event.target.value,
                         }))
                       }
-                      className="h-11 rounded-full border border-slate-200 bg-white px-4 text-sm"
+                      className="h-11 rounded-full border border-white/10 bg-white/6 px-4 text-sm text-white"
                     >
                       {roleOptions.map((role) => (
                         <option key={role.value} value={role.value}>

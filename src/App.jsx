@@ -14,6 +14,11 @@ import AdminDashboardPage from './pages/admin/DashboardPage'
 import AdminOrdersPage from './pages/admin/OrdersPage'
 import AdminProductsPage from './pages/admin/ProductManagerPage'
 import AdminRbacPage from './pages/admin/RbacPage'
+import AdminCustomerPage from './pages/admin/CustomerManagerPage'
+import AdminAccountPage from './pages/admin/AccountManagerPage'
+import WorkspaceDashboardPage from './pages/workspace/WorkspaceDashboardPage'
+import AdminExportPage from './pages/admin/ExportPage'
+import WorkspaceCustomerPage from './pages/admin/CustomerManagerPage'
 
 const DEFAULT_CATEGORY_OPTIONS = [
   { label: '全部分类', value: 'all' },
@@ -125,6 +130,7 @@ function AppProvider({ children }) {
         role: response.data.role,
         username: response.data.username,
         email: response.data.email,
+        session_id: response.data.session_id,
         user: response.data.user,
       }
       setAuthToken(nextSession.access_token)
@@ -281,9 +287,10 @@ function AppRoutes() {
           </RequireRole>
         }
       >
-        <Route index element={<Navigate to="/workspace/my-products" replace />} />
+        <Route index element={<WorkspaceDashboardPage />} />
         <Route path="my-products" element={<AdminProductsPage scope="workspace" />} />
         <Route path="my-orders" element={<AdminOrdersPage scope="workspace" />} />
+        <Route path="customers" element={<WorkspaceCustomerPage scope="workspace" />} />
       </Route>
 
       <Route
@@ -296,6 +303,9 @@ function AppRoutes() {
       >
         <Route index element={<AdminDashboardPage />} />
         <Route path="products" element={<AdminProductsPage />} />
+        <Route path="customers" element={<AdminCustomerPage />} />
+        <Route path="accounts" element={<AdminAccountPage />} />
+        <Route path="export" element={<AdminExportPage />} />
         <Route path="orders" element={<AdminOrdersPage />} />
         <Route
           path="rbac"
