@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { api } from '../../lib/api'
 import { useApp } from '../../lib/app-context'
+import { matchesProductQuery } from '../../lib/product-search'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Textarea } from '../../components/ui/textarea'
@@ -20,11 +21,26 @@ const EMPTY_FORM = {
   stock: '',
   image_url: '',
   category: 'Awards',
-  customization: '{\n  "type": "Engraving",\n  "fields": ["Name"]\n}',
+  customization: '',
+}
+
+function resolveApiError(error, fallback = '请稍后重试') {
+  const payload = error?.response?.data
+  if (typeof payload === 'string' && payload.trim()) {
+    return payload.trim()
+  }
+  if (payload && typeof payload === 'object') {
+    const explicit = [payload.error, payload.message, payload.detail].find((item) => typeof item === 'string' && item.trim())
+    if (explicit) return explicit.trim()
+  }
+  if (typeof error?.message === 'string' && error.message.trim()) {
+    return error.message.trim()
+  }
+  return fallback
 }
 
 export default function ProductManagerPage({ scope = 'admin' }) {
-  const { products, reloadProducts, reloadProductCategories, pushToast, isAdmin } = useApp()
+  const { products, reloadProducts, reloadProductCategories, pushToast, session } = useApp()
   const [workspaceProducts, setWorkspaceProducts] = useState([])
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [categoryCatalog, setCategoryCatalog] = useState([])
@@ -42,12 +58,23 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   const [saving, setSaving] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [pendingSavePayload, setPendingSavePayload] = useState(null)
 
   const visibleProducts = scope === 'workspace' ? workspaceProducts : products
+  const canManageCategoryDictionary = Boolean(session && ['user', 'admin', 'superadmin'].includes(session.role))
+  const canEditProduct = useCallback(
+    (product) => {
+      if (!session) return false
+      if (['admin', 'superadmin'].includes(session.role)) return true
+      return session.role === 'user' ? product?.owner_id === session?.user?.id : false
+    },
+    [session],
+  )
+  const canDeleteProduct = canEditProduct
 
   const tabs = useMemo(() => {
     const uniqueCategories = Array.from(new Set(visibleProducts.map((product) => product.category).filter(Boolean)))
@@ -82,11 +109,8 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   }, [categoryCatalog, form.category])
 
   const filteredProducts = useMemo(() => {
-    const query = search.trim().toLowerCase()
     const next = visibleProducts.filter((product) => {
-      const matchesSearch = `${product.name} ${product.description || ''} ${product.category || ''}`
-        .toLowerCase()
-        .includes(query)
+      const matchesSearch = matchesProductQuery(product, search)
       const matchesCategory =
         activeCategory === 'All Products' ||
         activeCategory === 'Most Purchased' ||
@@ -101,14 +125,25 @@ export default function ProductManagerPage({ scope = 'admin' }) {
     return next
   }, [activeCategory, search, visibleProducts])
 
+  const customizationError = useMemo(() => {
+    const content = form.customization.trim()
+    if (!content) return ''
+    try {
+      JSON.parse(content)
+      return ''
+    } catch {
+      return 'JSON 格式有误，请检查括号、引号和逗号。'
+    }
+  }, [form.customization])
+
   const refreshVisibleProducts = useCallback(async () => {
     if (scope === 'workspace') {
       setWorkspaceLoading(true)
       try {
         const response = await api.get('/workspace/products')
         setWorkspaceProducts(response.data || [])
-      } catch {
-        pushToast('error', '商品加载失败')
+      } catch (error) {
+        pushToast('error', '商品加载失败', resolveApiError(error))
       } finally {
         setWorkspaceLoading(false)
       }
@@ -141,11 +176,11 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   }, [refreshVisibleProducts])
 
   useEffect(() => {
-    if (scope !== 'admin') return
-    refreshCategoryCatalog().catch(() => {
-      pushToast('error', '类型字典加载失败')
+    if (!canManageCategoryDictionary) return
+    refreshCategoryCatalog().catch((error) => {
+      pushToast('error', '类型字典加载失败', resolveApiError(error))
     })
-  }, [scope, refreshCategoryCatalog, pushToast])
+  }, [canManageCategoryDictionary, refreshCategoryCatalog, pushToast])
 
   const openCreateDrawer = () => {
     setSelectedId(null)
@@ -154,6 +189,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       ...EMPTY_FORM,
       category: defaultCategory,
     })
+    setAdvancedOpen(false)
     setDrawerOpen(true)
   }
 
@@ -169,6 +205,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       category: product.category || categoryCatalog.find((item) => item.active)?.name || categoryCatalog[0]?.name || '',
       customization: JSON.stringify(product.customization || {}, null, 2),
     })
+    setAdvancedOpen(Boolean(product.customization && Object.keys(product.customization || {}).length))
     setDrawerOpen(true)
   }
 
@@ -232,8 +269,8 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       closeDrawer()
       setSaveConfirmOpen(false)
       setPendingSavePayload(null)
-    } catch {
-      pushToast('error', '保存失败')
+    } catch (error) {
+      pushToast('error', '保存失败', resolveApiError(error))
     } finally {
       setSaving(false)
     }
@@ -314,8 +351,8 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       setCategoryPendingAction(null)
       setNewCategoryName('')
       setNewCategorySort('0')
-    } catch {
-      pushToast('error', '类型操作失败')
+    } catch (error) {
+      pushToast('error', '类型操作失败', resolveApiError(error))
     } finally {
       setCategorySaving(false)
     }
@@ -329,6 +366,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
         setActiveCategory={setActiveCategory}
         search={search}
         setSearch={setSearch}
+        canOpenCategoryModal={canManageCategoryDictionary}
         onOpenCategoryModal={() => setCategoryModalOpen(true)}
         onRefresh={refreshVisibleProducts}
         onCreate={openCreateDrawer}
@@ -338,6 +376,8 @@ export default function ProductManagerPage({ scope = 'admin' }) {
         <ProductManagerGrid
           products={filteredProducts}
           loading={scope === 'workspace' ? workspaceLoading : false}
+          canEditProduct={canEditProduct}
+          canDeleteProduct={canDeleteProduct}
           onEdit={openEditDrawer}
           onDelete={requestDeleteProduct}
           onReset={() => {
@@ -347,7 +387,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
         />
       </div>
 
-      {scope === 'admin' && isAdmin ? (
+      {canManageCategoryDictionary ? (
         <ProductManagerCategoryModal
           open={categoryModalOpen}
           onOpenChange={setCategoryModalOpen}
@@ -368,18 +408,13 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       <Modal open={drawerOpen} onOpenChange={setDrawerOpen}>
         <ModalContent className="max-w-6xl border-white/10 bg-[#111114]/96 text-zinc-100 shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
           <ModalHeader className="border-b border-white/10 bg-white/5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">
-                  {selectedId ? '编辑商品' : '新增商品'}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  在这里完成商品信息编辑，保存前会再确认一次。
-                </p>
-              </div>
-              <Button onClick={requestSaveProduct} disabled={saving}>
-                {saving ? '保存中...' : '确认保存'}
-              </Button>
+            <div>
+              <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">
+                {selectedId ? '编辑商品' : '新增商品'}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                按顺序填写信息，最后在底部统一提交。
+              </p>
             </div>
           </ModalHeader>
 
@@ -392,20 +427,6 @@ export default function ProductManagerPage({ scope = 'admin' }) {
                   onChange={(nextValue) => setForm((current) => ({ ...current, image_url: nextValue }))}
                   helperText="选择图片后会直接转成前端字符串并实时预览"
                 />
-
-                <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-xl">
-                  <div className="text-sm font-semibold text-white">商品摘要</div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">名称</div>
-                      <div className="mt-1 truncate text-sm font-semibold text-white">{form.name || '未填写'}</div>
-                    </div>
-                    <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">分类</div>
-                      <div className="mt-1 truncate text-sm font-semibold text-white">{form.category || '未选择'}</div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <div className="space-y-4">
@@ -452,14 +473,60 @@ export default function ProductManagerPage({ scope = 'admin' }) {
                   />
                 </label>
 
-                <label className="block space-y-2">
-                  <span className="text-sm font-medium text-zinc-300">自定义 JSON</span>
-                  <Textarea
-                    value={form.customization}
-                    onChange={(event) => setForm((current) => ({ ...current, customization: event.target.value }))}
-                    rows={4}
-                  />
-                </label>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-zinc-200">高级设置（可选）</div>
+                      <div className="mt-1 text-xs text-zinc-500">普通商品可跳过，只有需要特殊定制时再展开。</div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setAdvancedOpen((current) => !current)}
+                      className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10"
+                    >
+                      {advancedOpen ? '收起设置' : '展开设置'}
+                    </Button>
+                  </div>
+
+                  {advancedOpen ? (
+                    <div className="mt-4 space-y-3">
+                      <label className="block space-y-2">
+                        <span className="text-sm font-medium text-zinc-300">自定义 JSON</span>
+                        <Textarea
+                          value={form.customization}
+                          onChange={(event) => setForm((current) => ({ ...current, customization: event.target.value }))}
+                          rows={5}
+                          placeholder={'{\n  "type": "Engraving",\n  "fields": ["Name"]\n}'}
+                        />
+                      </label>
+                      {customizationError ? <div className="text-xs text-rose-400">{customizationError}</div> : null}
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() =>
+                            setForm((current) => ({
+                              ...current,
+                              customization: '{\n  "type": "Engraving",\n  "fields": ["Name"]\n}',
+                            }))
+                          }
+                          className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10"
+                        >
+                          填入示例模板
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setForm((current) => ({ ...current, customization: '' }))}
+                          className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10"
+                        >
+                          清空配置
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           </ModalBody>
@@ -523,8 +590,8 @@ export default function ProductManagerPage({ scope = 'admin' }) {
             if (selectedId === pendingDelete.id) {
               closeDrawer()
             }
-          } catch {
-            pushToast('error', '删除失败')
+          } catch (error) {
+            pushToast('error', '删除失败', resolveApiError(error))
           } finally {
             setSaving(false)
           }

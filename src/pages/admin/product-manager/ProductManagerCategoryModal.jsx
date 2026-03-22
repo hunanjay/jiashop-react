@@ -53,7 +53,7 @@ export default function ProductManagerCategoryModal({
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">{categoryCatalog.length} items</Badge>
-              <Badge variant="outline">Only Admin</Badge>
+              <Badge variant="outline">User / Admin / SuperAdmin</Badge>
             </div>
           </div>
         </ModalHeader>

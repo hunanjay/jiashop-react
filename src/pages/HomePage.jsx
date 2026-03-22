@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
+import { CARD_IMAGE_ASPECT } from '../components/ui/file-upload'
 
 const PRICE_FILTERS = [
   { label: '全部价格', value: 'all' },
@@ -248,11 +249,14 @@ export default function HomePage() {
         <main className="space-y-5">
 
           {loadingProducts ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="overflow-hidden rounded-[26px] border border-white/10 bg-white/6 shadow-sm backdrop-blur-2xl">
-                  <div className="h-72 animate-pulse bg-white/10" />
-                  <div className="space-y-3 p-4">
+                <div
+                  key={index}
+                  className="overflow-hidden rounded-[20px] border border-white/10 bg-white/6 shadow-[0_14px_36px_rgba(0,0,0,0.24)] backdrop-blur-2xl"
+                >
+                  <div className="animate-pulse bg-white/10" style={{ aspectRatio: CARD_IMAGE_ASPECT }} />
+                  <div className="space-y-3 px-3 py-3">
                     <div className="h-4 w-24 rounded-full bg-white/10" />
                     <div className="h-6 w-3/4 rounded-full bg-white/10" />
                     <div className="h-4 w-full rounded-full bg-white/10" />
@@ -262,22 +266,22 @@ export default function HomePage() {
               ))}
             </div>
           ) : productRows.length ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {productRows.map((product) => {
                 return (
                   <Link
                     key={product.id}
                     to={`/product/${product.id}`}
-                    className="group overflow-hidden rounded-[26px] border border-white/10 bg-white/6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] transition duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/10 hover:shadow-[0_28px_72px_rgba(0,0,0,0.48)]"
+                    className="group overflow-hidden rounded-[20px] border border-white/10 bg-white/6 shadow-[0_14px_36px_rgba(0,0,0,0.24)] transition duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/10 hover:shadow-[0_22px_48px_rgba(0,0,0,0.32)]"
                   >
-                    <div className="overflow-hidden bg-black/40">
+                    <div className="overflow-hidden bg-black/40" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
                       <img
                         src={product.image_url}
                         alt={product.name}
-                        className="h-72 w-full object-cover transition duration-700 group-hover:scale-105"
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                       />
                     </div>
-                    <div className="border-t border-white/10 bg-black/55 px-4 py-3 backdrop-blur-xl">
+                    <div className="border-t border-white/10 bg-black/55 px-3 py-3 backdrop-blur-xl">
                       <div className="truncate text-sm font-medium tracking-[-0.02em] text-white">
                         {product.name}
                       </div>

@@ -7,9 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge'
 import { formatCurrency } from '../../lib/format'
 
-export default function DashboardPage() {
-  const { products, isSuperAdmin, pushToast } = useApp()
+export default function DashboardPage({ scope = 'admin' }) {
+  const { products, session, isSuperAdmin, pushToast } = useApp()
+  const isWorkspace = scope === 'workspace'
   const [orders, setOrders] = useState([])
+  const [workspaceProducts, setWorkspaceProducts] = useState([])
+  const [customers, setCustomers] = useState([])
   const [users, setUsers] = useState([])
   const [stats, setStats] = useState(null)
   const [reportView, setReportView] = useState('weekly')
@@ -17,15 +20,19 @@ export default function DashboardPage() {
   useEffect(() => {
     let mounted = true
     Promise.all([
-      api.get('/admin/orders').then((res) => res.data).catch(() => []),
-      isSuperAdmin ? api.get('/admin/users').then((res) => res.data).catch(() => []) : Promise.resolve([]),
-      api.get('/admin/stats').then((res) => res.data).catch(() => null),
-    ]).then(([orderData, userData, statData]) => {
+      api.get(isWorkspace ? '/workspace/orders' : '/admin/orders').then((res) => res.data).catch(() => []),
+      isWorkspace ? api.get('/workspace/products').then((res) => res.data).catch(() => []) : Promise.resolve([]),
+      api.get(isWorkspace ? '/workspace/customers' : '/admin/customers').then((res) => res.data).catch(() => []),
+      !isWorkspace && isSuperAdmin ? api.get('/admin/users').then((res) => res.data).catch(() => []) : Promise.resolve([]),
+      !isWorkspace ? api.get('/admin/stats').then((res) => res.data).catch(() => null) : Promise.resolve(null),
+    ]).then(([orderData, workspaceProductData, customerData, userData, statData]) => {
       if (!mounted) return
       setOrders(orderData)
+      setWorkspaceProducts(workspaceProductData)
+      setCustomers(customerData)
       setUsers(userData)
       setStats(statData)
-      if (!statData) {
+      if (!isWorkspace && !statData) {
         pushToast('error', '看板统计加载失败')
       }
     })
@@ -33,16 +40,82 @@ export default function DashboardPage() {
     return () => {
       mounted = false
     }
-  }, [isSuperAdmin, pushToast])
+  }, [isSuperAdmin, isWorkspace, pushToast])
+
+  const fallbackDailyTrend = useMemo(() => {
+    const now = new Date()
+    const dayMap = new Map()
+    for (let index = 6; index >= 0; index -= 1) {
+      const day = new Date(now)
+      day.setDate(now.getDate() - index)
+      const key = day.toISOString().slice(0, 10)
+      dayMap.set(key, {
+        label: `${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`,
+        orders: 0,
+        sales_total: 0,
+      })
+    }
+    orders.forEach((order) => {
+      const key = (order.created_at || '').slice(0, 10)
+      const bucket = dayMap.get(key)
+      if (!bucket) return
+      bucket.orders += 1
+      bucket.sales_total += Number(order.total_price || 0)
+    })
+    return Array.from(dayMap.values())
+  }, [orders])
+
+  const fallbackWeeklySummary = useMemo(() => {
+    const now = new Date()
+    const summaries = Array.from({ length: 4 }).map((_, index) => ({
+      label: `W${index + 1}`,
+      orders: 0,
+      sales_total: 0,
+    }))
+    orders.forEach((order) => {
+      if (!order.created_at) return
+      const createdAt = new Date(order.created_at)
+      const ageDays = Math.floor((now.getTime() - createdAt.getTime()) / (24 * 60 * 60 * 1000))
+      if (Number.isNaN(ageDays) || ageDays < 0 || ageDays >= 28) return
+      const bucketIndex = 3 - Math.floor(ageDays / 7)
+      const bucket = summaries[Math.max(0, Math.min(3, bucketIndex))]
+      bucket.orders += 1
+      bucket.sales_total += Number(order.total_price || 0)
+    })
+    return summaries
+  }, [orders])
+
+  const fallbackMonthlySummary = useMemo(() => {
+    const now = new Date()
+    const monthOrders = orders.filter((order) => {
+      if (!order.created_at) return false
+      const createdAt = new Date(order.created_at)
+      return createdAt.getFullYear() === now.getFullYear() && createdAt.getMonth() === now.getMonth()
+    })
+    return {
+      orders: monthOrders.length,
+      sales_total: monthOrders.reduce((sum, order) => sum + Number(order.total_price || 0), 0),
+    }
+  }, [orders])
+
+  const fallbackCustomerSummary = useMemo(() => {
+    const recent = [...customers]
+      .sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || '')))
+      .slice(0, 5)
+    return {
+      recent,
+      owner_distribution: [{ username: session?.username || 'Me', count: customers.length }],
+    }
+  }, [customers, session?.username])
 
   const overviewCards = useMemo(
     () => [
-      { label: '商品总数', value: products.length, icon: Package },
+      { label: '商品总数', value: isWorkspace ? workspaceProducts.length : products.length, icon: Package },
       { label: '订单数', value: stats?.orders ?? orders.length, icon: ReceiptText },
-      { label: '客户数', value: stats?.customers ?? 0, icon: Users },
+      { label: '客户数', value: stats?.customers ?? customers.length, icon: Users },
       { label: '总销售额', value: formatCurrency(stats?.sales_total ?? orders.reduce((sum, item) => sum + Number(item.total_price || 0), 0)), icon: ShieldCheck },
     ],
-    [orders, products.length, stats],
+    [customers.length, isWorkspace, orders, products.length, stats, workspaceProducts.length],
   )
 
   const statusBreakdown = stats?.status_distribution?.length
@@ -53,12 +126,12 @@ export default function DashboardPage() {
         { status: 'Completed', count: orders.filter((order) => order.status === 'Completed').length },
       ]
 
-  const ranking = stats?.sales_ranking || []
-  const dailyTrend = stats?.daily_trend || []
-  const weeklySummary = stats?.weekly_summary || []
-  const monthlySummary = stats?.monthly_summary || { orders: 0, sales_total: 0 }
-  const customerSummary = stats?.customer_summary || { recent: [], owner_distribution: [] }
-  const ownerNameById = (ownerId) => users.find((user) => user.id === ownerId)?.username || ownerId || '未归属'
+  const ranking = stats?.sales_ranking || (isWorkspace ? [{ username: session?.username || 'Me', sales_total: orders.reduce((sum, item) => sum + Number(item.total_price || 0), 0), order_count: orders.length }] : [])
+  const dailyTrend = stats?.daily_trend || fallbackDailyTrend
+  const weeklySummary = stats?.weekly_summary || fallbackWeeklySummary
+  const monthlySummary = stats?.monthly_summary || fallbackMonthlySummary
+  const customerSummary = stats?.customer_summary || fallbackCustomerSummary
+  const ownerNameById = (ownerId) => users.find((user) => user.id === ownerId)?.username || session?.username || ownerId || '未归属'
 
   return (
     <div className="space-y-3 text-zinc-100">

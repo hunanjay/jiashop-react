@@ -12,6 +12,7 @@ import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '../../
 import { ConfirmDialog } from '../../components/ui/confirm-dialog'
 import { FileUploadField } from '../../components/ui/file-upload'
 import { formatCurrency, formatDateTime } from '../../lib/format'
+import { searchProducts } from '../../lib/product-search'
 
 const STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled']
 
@@ -29,13 +30,26 @@ const EMPTY_FORM = {
   items: [{ product_id: '', product_name: '', product_query: '', qty: 1 }],
 }
 
+function resolveApiError(error, fallback = '请稍后重试') {
+  const payload = error?.response?.data
+  if (typeof payload === 'string' && payload.trim()) return payload.trim()
+  if (payload && typeof payload === 'object') {
+    const text = [payload.error, payload.message, payload.detail].find((item) => typeof item === 'string' && item.trim())
+    if (text) return text.trim()
+  }
+  if (typeof error?.message === 'string' && error.message.trim()) return error.message.trim()
+  return fallback
+}
+
 export default function OrdersPage({ scope = 'admin' }) {
   const { pushToast, products, categoryOptions } = useApp()
   const [orders, setOrders] = useState([])
   const [workspaceOrders, setWorkspaceOrders] = useState([])
+  const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [search, setSearch] = useState('')
+  const [customerQuery, setCustomerQuery] = useState('')
   const [productTypeFilter, setProductTypeFilter] = useState('all')
   const [form, setForm] = useState(EMPTY_FORM)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -48,14 +62,15 @@ export default function OrdersPage({ scope = 'admin' }) {
   const [detailOrder, setDetailOrder] = useState(null)
   const [timeline, setTimeline] = useState([])
   const [noteDraft, setNoteDraft] = useState('')
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null)
 
   const loadOrders = useCallback(async () => {
     setLoading(true)
     try {
       const response = await api.get('/admin/orders')
       setOrders(response.data || [])
-    } catch {
-      pushToast('error', '订单加载失败')
+    } catch (error) {
+      pushToast('error', '订单加载失败', resolveApiError(error))
     } finally {
       setLoading(false)
     }
@@ -66,20 +81,31 @@ export default function OrdersPage({ scope = 'admin' }) {
     try {
       const response = await api.get('/workspace/orders')
       setWorkspaceOrders(response.data || [])
-    } catch {
-      pushToast('error', '订单加载失败')
+    } catch (error) {
+      pushToast('error', '订单加载失败', resolveApiError(error))
     } finally {
       setWorkspaceLoading(false)
     }
   }, [pushToast])
 
+  const loadCustomers = useCallback(async () => {
+    try {
+      const response = await api.get(scope === 'workspace' ? '/workspace/customers' : '/admin/customers')
+      setCustomers(response.data || [])
+    } catch (error) {
+      setCustomers([])
+      pushToast('error', '客户列表加载失败', resolveApiError(error))
+    }
+  }, [pushToast, scope])
+
   useEffect(() => {
     if (scope === 'workspace') {
       loadWorkspaceOrders()
-      return
+    } else {
+      loadOrders()
     }
-    loadOrders()
-  }, [scope, loadOrders, loadWorkspaceOrders])
+    loadCustomers()
+  }, [scope, loadOrders, loadWorkspaceOrders, loadCustomers])
 
   const visibleOrders = scope === 'workspace' ? workspaceOrders : orders
   const productCategories = categoryOptions
@@ -100,6 +126,7 @@ export default function OrdersPage({ scope = 'admin' }) {
   const openCreateDrawer = () => {
     setSelectedId(null)
     setForm(EMPTY_FORM)
+    setCustomerQuery('')
     setProductTypeFilter('all')
     setDrawerOpen(true)
   }
@@ -129,8 +156,31 @@ export default function OrdersPage({ scope = 'admin' }) {
           }))
         : [{ product_id: '', product_name: '', product_category: '', product_query: '', qty: 1 }],
     })
+    setCustomerQuery(order.customer_name || '')
     setProductTypeFilter('all')
     setDrawerOpen(true)
+  }
+
+  const matchCustomers = (query) => {
+    const normalized = (query || '').trim().toLowerCase()
+    if (!normalized) return []
+    return customers
+      .filter((customer) => {
+        const text = `${customer.company_name || ''} ${customer.purchaser || ''} ${customer.phone || ''} ${customer.id || ''}`.toLowerCase()
+        return text.includes(normalized)
+      })
+      .slice(0, 8)
+  }
+
+  const applyCustomerToForm = (customer) => {
+    setForm((current) => ({
+      ...current,
+      customer_name: customer.company_name || '',
+      customer_id: customer.id || '',
+      customer_phone: customer.phone || '',
+      shipping_address: customer.shipping_address || '',
+    }))
+    setCustomerQuery(customer.company_name || '')
   }
 
   const prepareSaveOrder = () => {
@@ -192,8 +242,8 @@ export default function OrdersPage({ scope = 'admin' }) {
       setDrawerOpen(false)
       setSaveConfirmOpen(false)
       setPendingSavePayload(null)
-    } catch {
-      pushToast('error', '保存失败')
+    } catch (error) {
+      pushToast('error', '保存失败', resolveApiError(error))
     } finally {
       setSaving(false)
     }
@@ -211,8 +261,8 @@ export default function OrdersPage({ scope = 'admin' }) {
     try {
       const response = await api.get(`/admin/orders/${order.id}/timeline`)
       setTimeline(response.data || [])
-    } catch {
-      pushToast('error', '时间线加载失败')
+    } catch (error) {
+      pushToast('error', '时间线加载失败', resolveApiError(error))
     }
   }
 
@@ -224,8 +274,26 @@ export default function OrdersPage({ scope = 'admin' }) {
       await refreshOrders()
       const response = await api.get(`/admin/orders/${detailOrder.id}/timeline`)
       setTimeline(response.data || [])
-    } catch {
-      pushToast('error', '备注保存失败')
+    } catch (error) {
+      pushToast('error', '备注保存失败', resolveApiError(error))
+    }
+  }
+
+  const updateOrderStatusInline = async (order, nextStatus) => {
+    if (!order || !nextStatus || nextStatus === order.status) return
+    const previousStatus = order.status
+    setStatusUpdatingId(order.id)
+    setOrders((current) => current.map((item) => (item.id === order.id ? { ...item, status: nextStatus } : item)))
+    setWorkspaceOrders((current) => current.map((item) => (item.id === order.id ? { ...item, status: nextStatus } : item)))
+    try {
+      await api.put(`/admin/orders/${order.id}/status`, { status: nextStatus })
+      pushToast('success', '订单状态已更新')
+    } catch (error) {
+      setOrders((current) => current.map((item) => (item.id === order.id ? { ...item, status: previousStatus } : item)))
+      setWorkspaceOrders((current) => current.map((item) => (item.id === order.id ? { ...item, status: previousStatus } : item)))
+      pushToast('error', '状态更新失败', resolveApiError(error))
+    } finally {
+      setStatusUpdatingId(null)
     }
   }
 
@@ -254,13 +322,9 @@ export default function OrdersPage({ scope = 'admin' }) {
   }
 
   const matchProducts = (query) => {
-    const normalized = (query || '').trim().toLowerCase()
-    if (!normalized) return []
-
-    return products.filter((product) => {
+    return searchProducts(products, query).filter((product) => {
       const matchesCategory = productTypeFilter === 'all' || product.category === productTypeFilter
-      const text = `${product.name} ${product.id} ${product.category || ''}`.toLowerCase()
-      return matchesCategory && text.includes(normalized)
+      return matchesCategory
     })
   }
 
@@ -318,7 +382,20 @@ export default function OrdersPage({ scope = 'admin' }) {
                     <TableCell className="font-medium text-white">{order.id}</TableCell>
                     <TableCell>{order.customer_name}</TableCell>
                     <TableCell>
-                      <Badge variant={order.status === 'Completed' ? 'default' : 'secondary'}>{order.status}</Badge>
+                      <select
+                        value={order.status}
+                        disabled={statusUpdatingId === order.id}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) => updateOrderStatusInline(order, event.target.value)}
+                        className="h-8 min-w-[120px] rounded-lg border border-white/10 bg-white/6 px-2 text-xs text-white disabled:cursor-not-allowed disabled:opacity-70"
+                        title="选择新状态可直接更新"
+                      >
+                        {STATUS_OPTIONS.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
                     </TableCell>
                     <TableCell>{formatCurrency(order.total_price)}</TableCell>
                     <TableCell>{formatDateTime(order.created_at)}</TableCell>
@@ -362,33 +439,74 @@ export default function OrdersPage({ scope = 'admin' }) {
       </Card>
 
       <Modal open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <ModalContent className="max-w-6xl border-white/10 bg-[#111114]/96 text-zinc-100 shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
+        <ModalContent className="w-[95vw] max-w-[1500px] border-white/10 bg-[#111114]/96 text-zinc-100 shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
           <ModalHeader className="border-b border-white/10 bg-white/5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">{selectedId ? '编辑订单' : '新增订单'}</h2>
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  订单可以先录入客户、金额和商品明细，再点击确认进行二次提交。
-                </p>
-              </div>
-              <Button onClick={requestSaveOrder} disabled={saving}>
-                {saving ? '保存中...' : '确认保存'}
-              </Button>
+            <div>
+              <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">{selectedId ? '编辑订单' : '新增订单'}</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-500">
+                订单可以先录入客户、金额和商品明细，再点击确认进行二次提交。
+              </p>
             </div>
           </ModalHeader>
 
-          <ModalBody>
+          <ModalBody className="max-h-[78vh] overflow-y-auto">
             <div className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
               <div className="space-y-4">
                 <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-xl">
                   <div className="text-sm font-semibold text-white">订单基础信息</div>
                   <div className="mt-4 space-y-4">
                     <label className="block space-y-2">
-                      <span className="text-sm font-medium text-zinc-300">客户名称</span>
-                      <Input value={form.customer_name} onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))} />
+                      <span className="text-sm font-medium text-zinc-300">选择客户（从客户管理检索）</span>
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                        <Input
+                          value={customerQuery}
+                          onChange={(event) => {
+                            const nextQuery = event.target.value
+                            setCustomerQuery(nextQuery)
+                            if (!nextQuery.trim()) {
+                              setForm((current) => ({
+                                ...current,
+                                customer_id: '',
+                              }))
+                            }
+                          }}
+                          placeholder="输入公司名 / 采购员 / 电话 / 客户ID"
+                          className="pl-11"
+                        />
+                      </div>
                     </label>
 
+                    {customerQuery.trim() ? (
+                      <div className="space-y-2 rounded-[18px] border border-white/10 bg-white/5 p-2">
+                        {matchCustomers(customerQuery).length ? (
+                          matchCustomers(customerQuery).map((customer) => (
+                            <button
+                              key={customer.id}
+                              type="button"
+                              onClick={() => applyCustomerToForm(customer)}
+                              className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-white/10"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-semibold text-white">{customer.company_name}</div>
+                                <div className="mt-1 text-xs text-zinc-500">
+                                  {customer.purchaser || '未填写采购员'} · {customer.phone || '无电话'} · {customer.id}
+                                </div>
+                              </div>
+                              <div className="text-xs text-zinc-500">选择</div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-4 text-sm text-zinc-500">没有匹配客户</div>
+                        )}
+                      </div>
+                    ) : null}
+
                     <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block space-y-2">
+                        <span className="text-sm font-medium text-zinc-300">客户名称</span>
+                        <Input value={form.customer_name} onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))} />
+                      </label>
                       <label className="block space-y-2">
                         <span className="text-sm font-medium text-zinc-300">客户 ID</span>
                         <Input value={form.customer_id} onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))} />
@@ -428,6 +546,122 @@ export default function OrdersPage({ scope = 'admin' }) {
                   </div>
                 </div>
 
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-3 rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-xl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-white">订单商品</span>
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={productTypeFilter}
+                        onChange={(event) => setProductTypeFilter(event.target.value)}
+                        className="h-10 rounded-full border border-white/10 bg-white/6 px-4 text-sm text-white backdrop-blur-xl"
+                      >
+                        {productCategories.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                      <Button type="button" variant="secondary" onClick={addItem} className="h-10 border-white/10 bg-white/6 px-3 text-zinc-200 hover:bg-white/10">
+                        <Plus className="h-4 w-4" />
+                        添加商品
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-zinc-500">选择商品后会自动保留名称和分类</div>
+                  </div>
+
+                  <div className="space-y-3 max-h-[52vh] overflow-y-auto pr-1">
+                    {form.items.map((item, index) => (
+                      <div key={index} className="space-y-3 rounded-[20px] border border-white/10 bg-white/6 p-4 shadow-sm">
+                        <div className="grid gap-3 sm:grid-cols-[1fr_120px_auto]">
+                          <label className="block space-y-2">
+                            <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">商品搜索</span>
+                            <div className="relative">
+                              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                              <Input
+                                value={item.product_query}
+                                onChange={(event) =>
+                                  updateItem(index, {
+                                    ...item,
+                                    product_query: event.target.value,
+                                    product_id: '',
+                                    product_name: '',
+                                    product_category: '',
+                                  })
+                                }
+                                placeholder="输入商品名称 / ID / 分类"
+                                className="pl-11"
+                              />
+                            </div>
+                          </label>
+
+                          <label className="block space-y-2">
+                            <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">数量</span>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.qty}
+                              onChange={(event) => updateItem(index, { ...item, qty: Number(event.target.value || 1) })}
+                            />
+                          </label>
+
+                          <div className="flex items-end justify-end">
+                            <Button type="button" variant="destructive" onClick={() => removeItem(index)} disabled={form.items.length === 1}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {item.product_query?.trim() ? (
+                          <div className="space-y-2 rounded-[18px] border border-white/10 bg-white/5 p-2">
+                            {matchProducts(item.product_query).length ? (
+                              matchProducts(item.product_query).map((product) => (
+                                <button
+                                  key={product.id}
+                                  type="button"
+                                  onClick={() =>
+                                    updateItem(index, {
+                                      ...item,
+                                      product_id: product.id,
+                                      product_name: product.name,
+                                      product_category: product.category || '',
+                                      product_query: `${product.name} (${product.id})`,
+                                    })
+                                  }
+                                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-white/10"
+                                >
+                                  <img src={product.image_url} alt={product.name} className="h-12 w-12 rounded-2xl object-cover" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate text-sm font-semibold text-white">{product.name}</div>
+                                    <div className="mt-1 text-xs text-zinc-500">
+                                      {product.id} · {product.category || 'Uncategorized'}
+                                    </div>
+                                  </div>
+                                  <div className="text-sm font-semibold text-white">{formatCurrency(product.price)}</div>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-3 py-4 text-sm text-zinc-500">没有匹配商品</div>
+                            )}
+                          </div>
+                        ) : null}
+
+                        {item.product_id ? (
+                          <div className="rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400 px-3 py-2 text-sm text-white shadow-sm">
+                            已选商品: {item.product_name || item.product_id}
+                            {item.product_category ? ` · ${item.product_category}` : ''}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <FileUploadField
                     label="Logo"
@@ -447,119 +681,6 @@ export default function OrdersPage({ scope = 'admin' }) {
                   <span className="text-sm font-medium text-zinc-300">备注</span>
                   <Input value={form.remarks} onChange={(event) => setForm((current) => ({ ...current, remarks: event.target.value }))} />
                 </label>
-              </div>
-
-              <div className="space-y-3 rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-xl">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-white">订单商品</span>
-                  <div className="flex items-center gap-3">
-                    <select
-                      value={productTypeFilter}
-                      onChange={(event) => setProductTypeFilter(event.target.value)}
-                      className="h-10 rounded-full border border-white/10 bg-white/6 px-4 text-sm text-white backdrop-blur-xl"
-                    >
-                      {productCategories.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                    <Button type="button" variant="secondary" onClick={addItem} className="h-10 border-white/10 bg-white/6 px-3 text-zinc-200 hover:bg-white/10">
-                      <Plus className="h-4 w-4" />
-                      添加商品
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-zinc-500">选择商品后会自动保留名称和分类</div>
-                </div>
-
-                <div className="space-y-3 max-h-[68vh] overflow-y-auto pr-1">
-                  {form.items.map((item, index) => (
-                    <div key={index} className="space-y-3 rounded-[20px] border border-white/10 bg-white/6 p-4 shadow-sm">
-                      <div className="grid gap-3 sm:grid-cols-[1fr_120px_auto]">
-                        <label className="block space-y-2">
-                          <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">商品搜索</span>
-                          <div className="relative">
-                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                            <Input
-                              value={item.product_query}
-                              onChange={(event) =>
-                                updateItem(index, {
-                                  ...item,
-                                  product_query: event.target.value,
-                                  product_id: '',
-                                  product_name: '',
-                                  product_category: '',
-                                })
-                              }
-                              placeholder="输入商品名称 / ID / 分类"
-                              className="pl-11"
-                            />
-                          </div>
-                        </label>
-
-                        <label className="block space-y-2">
-                          <span className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">数量</span>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.qty}
-                            onChange={(event) => updateItem(index, { ...item, qty: Number(event.target.value || 1) })}
-                          />
-                        </label>
-
-                        <div className="flex items-end justify-end">
-                          <Button type="button" variant="destructive" onClick={() => removeItem(index)} disabled={form.items.length === 1}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {item.product_query?.trim() ? (
-                        <div className="space-y-2 rounded-[18px] border border-white/10 bg-white/5 p-2">
-                          {matchProducts(item.product_query).length ? (
-                            matchProducts(item.product_query).map((product) => (
-                              <button
-                                key={product.id}
-                                type="button"
-                                onClick={() =>
-                                  updateItem(index, {
-                                    ...item,
-                                    product_id: product.id,
-                                    product_name: product.name,
-                                    product_category: product.category || '',
-                                    product_query: `${product.name} (${product.id})`,
-                                  })
-                                }
-                                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition hover:bg-white/10"
-                              >
-                                <img src={product.image_url} alt={product.name} className="h-12 w-12 rounded-2xl object-cover" />
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-semibold text-white">{product.name}</div>
-                                  <div className="mt-1 text-xs text-zinc-500">
-                                    {product.id} · {product.category || 'Uncategorized'}
-                                  </div>
-                                </div>
-                                <div className="text-sm font-semibold text-white">{formatCurrency(product.price)}</div>
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-3 py-4 text-sm text-zinc-500">没有匹配商品</div>
-                          )}
-                        </div>
-                      ) : null}
-
-                      {item.product_id ? (
-                        <div className="rounded-2xl bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400 px-3 py-2 text-sm text-white shadow-sm">
-                          已选商品: {item.product_name || item.product_id}
-                          {item.product_category ? ` · ${item.product_category}` : ''}
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </ModalBody>

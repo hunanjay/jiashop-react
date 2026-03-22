@@ -3,7 +3,7 @@ import { Edit3, Package, Trash2 } from 'lucide-react'
 import { formatCurrency } from '../../../lib/format'
 import { CARD_IMAGE_ASPECT } from '../../../components/ui/file-upload'
 
-export default function ProductManagerGrid({ products, loading, onEdit, onDelete, onReset }) {
+export default function ProductManagerGrid({ products, loading, canEditProduct, canDeleteProduct, onEdit, onDelete, onReset }) {
   if (loading) {
     return (
       <div className="rounded-[20px] border border-white/10 bg-white/6 p-6 text-center text-zinc-500 shadow-[0_16px_50px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
@@ -34,6 +34,8 @@ export default function ProductManagerGrid({ products, loading, onEdit, onDelete
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {products.map((product) => {
+        const editable = canEditProduct ? canEditProduct(product) : true
+        const deletable = canDeleteProduct ? canDeleteProduct(product) : true
         return (
           <article
             key={product.id}
@@ -44,20 +46,24 @@ export default function ProductManagerGrid({ products, loading, onEdit, onDelete
                 {product.category || 'Uncategorized'}
               </div>
               <div className="absolute right-2 top-2 z-10 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onEdit(product)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/85 text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-white"
-                >
-                  <Edit3 className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(product)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 bg-rose-50/95 text-rose-700 shadow-sm backdrop-blur-xl transition hover:bg-rose-100"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {editable ? (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(product)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/85 text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-white"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+                {deletable ? (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(product)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 bg-rose-50/95 text-rose-700 shadow-sm backdrop-blur-xl transition hover:bg-rose-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
               </div>
               <img
                 src={product.image_url}

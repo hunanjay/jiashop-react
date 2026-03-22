@@ -10,6 +10,7 @@ export default function ProductManagerToolbar({
   setActiveCategory,
   search,
   setSearch,
+  canOpenCategoryModal = true,
   onOpenCategoryModal,
   onRefresh,
   onCreate,
@@ -43,13 +44,15 @@ export default function ProductManagerToolbar({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-            <Button
-              variant="secondary"
-              onClick={onOpenCategoryModal}
-              className="h-9 border-white/10 bg-white/6 px-3 text-sm text-zinc-200 backdrop-blur-xl hover:bg-white/10"
-            >
-              类型字典
-            </Button>
+            {canOpenCategoryModal ? (
+              <Button
+                variant="secondary"
+                onClick={onOpenCategoryModal}
+                className="h-9 border-white/10 bg-white/6 px-3 text-sm text-zinc-200 backdrop-blur-xl hover:bg-white/10"
+              >
+                类型字典
+              </Button>
+            ) : null}
             <Button
               variant="secondary"
               onClick={onRefresh}

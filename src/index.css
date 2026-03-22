@@ -107,3 +107,29 @@ select {
 ::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.04);
 }
+
+/* Sun theme readability adjustments for admin/workspace pages */
+.admin-shell.theme-sun .text-white {
+  color: #0f172a !important;
+}
+
+.admin-shell.theme-sun .text-zinc-100,
+.admin-shell.theme-sun .text-zinc-200,
+.admin-shell.theme-sun .text-zinc-300 {
+  color: #1e293b !important;
+}
+
+.admin-shell.theme-sun .text-zinc-400,
+.admin-shell.theme-sun .text-zinc-500 {
+  color: #475569 !important;
+}
+
+.admin-shell.theme-sun .border-white\/10 {
+  border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+.admin-shell.theme-sun .bg-white\/5,
+.admin-shell.theme-sun .bg-white\/6,
+.admin-shell.theme-sun .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.78) !important;
+}

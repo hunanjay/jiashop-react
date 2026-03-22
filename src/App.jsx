@@ -5,7 +5,6 @@ import { AppContext } from './lib/app-context'
 import { api, setAuthToken } from './lib/api'
 import AdminLayout from './layouts/AdminLayout'
 import ClientLayout from './layouts/ClientLayout'
-import UserLayout from './layouts/UserLayout'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import ProductDetailPage from './pages/ProductDetailPage'
@@ -16,7 +15,6 @@ import AdminProductsPage from './pages/admin/ProductManagerPage'
 import AdminRbacPage from './pages/admin/RbacPage'
 import AdminCustomerPage from './pages/admin/CustomerManagerPage'
 import AdminAccountPage from './pages/admin/AccountManagerPage'
-import WorkspaceDashboardPage from './pages/workspace/WorkspaceDashboardPage'
 import AdminExportPage from './pages/admin/ExportPage'
 import WorkspaceCustomerPage from './pages/admin/CustomerManagerPage'
 
@@ -32,6 +30,7 @@ const DEFAULT_CATEGORY_OPTIONS = [
 const STORAGE_KEYS = {
   session: 'giftcraft-session',
   cart: 'giftcraft-cart',
+  theme: 'giftcraft-theme',
 }
 
 function safeParseJSON(value, fallback) {
@@ -52,6 +51,12 @@ function loadCart() {
   return safeParseJSON(window.localStorage.getItem(STORAGE_KEYS.cart), {})
 }
 
+function loadTheme() {
+  if (typeof window === 'undefined') return 'night'
+  const stored = window.localStorage.getItem(STORAGE_KEYS.theme)
+  return stored === 'sun' ? 'sun' : 'night'
+}
+
 function AppProvider({ children }) {
   const [session, setSession] = useState(loadSession)
   const [products, setProducts] = useState([])
@@ -61,6 +66,7 @@ function AppProvider({ children }) {
   const [toasts, setToasts] = useState([])
   const [loadingAuth, setLoadingAuth] = useState(false)
   const [categoryOptions, setCategoryOptions] = useState(DEFAULT_CATEGORY_OPTIONS)
+  const [theme, setTheme] = useState(loadTheme)
 
   useEffect(() => {
     setAuthToken(session?.access_token || null)
@@ -78,6 +84,12 @@ function AppProvider({ children }) {
       window.localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(cart))
     }
   }, [cart])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEYS.theme, theme)
+    window.document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   const pushToast = useCallback((type, title, detail = '') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -172,6 +184,9 @@ function AppProvider({ children }) {
   }, [])
 
   const clearCart = useCallback(() => setCart({}), [])
+  const toggleTheme = useCallback(() => {
+    setTheme((current) => (current === 'night' ? 'sun' : 'night'))
+  }, [])
 
   const cartItems = useMemo(() => {
     return Object.entries(cart)
@@ -225,6 +240,9 @@ function AppProvider({ children }) {
       reloadProductCategories: loadProductCategories,
       isAdmin,
       isSuperAdmin,
+      theme,
+      setTheme,
+      toggleTheme,
     }),
     [
       addToCart,
@@ -237,6 +255,9 @@ function AppProvider({ children }) {
       isAdmin,
       isSuperAdmin,
       categoryOptions,
+      theme,
+      setTheme,
+      toggleTheme,
       loadProducts,
       loadProductCategories,
       loadingAuth,
@@ -283,11 +304,12 @@ function AppRoutes() {
         path="/workspace"
         element={
           <RequireRole roles={['user', 'admin', 'superadmin']}>
-            <UserLayout />
+            <AdminLayout scope="workspace" />
           </RequireRole>
         }
       >
-        <Route index element={<WorkspaceDashboardPage />} />
+        <Route index element={<AdminDashboardPage scope="workspace" />} />
+        <Route path="dashboard" element={<AdminDashboardPage scope="workspace" />} />
         <Route path="my-products" element={<AdminProductsPage scope="workspace" />} />
         <Route path="my-orders" element={<AdminOrdersPage scope="workspace" />} />
         <Route path="customers" element={<WorkspaceCustomerPage scope="workspace" />} />
@@ -297,7 +319,7 @@ function AppRoutes() {
         path="/admin"
         element={
           <RequireRole roles={['admin', 'superadmin']}>
-            <AdminLayout />
+            <AdminLayout scope="admin" />
           </RequireRole>
         }
       >

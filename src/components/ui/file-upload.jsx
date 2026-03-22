@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Crop, FileImage, Move, Upload, X, ZoomIn } from 'lucide-react'
+import Cropper from 'react-easy-crop'
+import 'react-easy-crop/react-easy-crop.css'
 
 import { cn } from '../../lib/utils'
 import { Button } from './button'
@@ -9,6 +11,11 @@ export const CARD_IMAGE_ASPECT = '5 / 4'
 const CARD_IMAGE_ASPECT_RATIO = 5 / 4
 const CROP_OUTPUT_WIDTH = 1200
 const CROP_OUTPUT_HEIGHT = Math.round(CROP_OUTPUT_WIDTH / CARD_IMAGE_ASPECT_RATIO)
+const ZOOM_PRESETS = [
+  { label: '50%', value: 0.5 },
+  { label: '100%', value: 1 },
+  { label: '200%', value: 2 },
+]
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value))
@@ -18,8 +25,13 @@ function isImageLike(value) {
   return typeof value === 'string' && (value.startsWith('data:image/') || /\.(avif|bmp|gif|heic|jpeg|jpg|png|svg|webp)(\?|#|$)/i.test(value))
 }
 
-function getPoint(event) {
-  return { x: event.clientX, y: event.clientY }
+function createImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = reject
+    image.src = src
+  })
 }
 
 export function FileUploadField({
@@ -31,76 +43,28 @@ export function FileUploadField({
   className,
 }) {
   const inputRef = useRef(null)
-  const stageRef = useRef(null)
   const [isReading, setIsReading] = useState(false)
+  const [isCropping, setIsCropping] = useState(false)
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingSource, setPendingSource] = useState('')
   const [pendingName, setPendingName] = useState('')
-  const [imageMeta, setImageMeta] = useState(null)
-  const [stageWidth, setStageWidth] = useState(0)
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
-  const [dragState, setDragState] = useState(null)
-
-  useEffect(() => {
-    if (!cropOpen || !stageRef.current) return undefined
-
-    const element = stageRef.current
-    const observer = new ResizeObserver(([entry]) => {
-      setStageWidth(entry.contentRect.width)
-    })
-    observer.observe(element)
-
-    return () => observer.disconnect()
-  }, [cropOpen])
-
-  useEffect(() => {
-    if (!dragState || !imageMeta || !stageWidth) return undefined
-
-    const handleMove = (event) => {
-      const nextPoint = getPoint(event)
-      const deltaX = nextPoint.x - dragState.startX
-      const deltaY = nextPoint.y - dragState.startY
-
-      const stageHeight = stageWidth / CARD_IMAGE_ASPECT_RATIO
-      const baseScale = Math.max(stageWidth / imageMeta.width, stageHeight / imageMeta.height)
-      const displayScale = baseScale * zoom
-      const displayWidth = imageMeta.width * displayScale
-      const displayHeight = imageMeta.height * displayScale
-      const maxOffsetX = Math.max(0, (displayWidth - stageWidth) / 2)
-      const maxOffsetY = Math.max(0, (displayHeight - stageHeight) / 2)
-
-      setOffset({
-        x: clamp(dragState.originX + deltaX, -maxOffsetX, maxOffsetX),
-        y: clamp(dragState.originY + deltaY, -maxOffsetY, maxOffsetY),
-      })
-    }
-
-    const handleUp = () => {
-      setDragState(null)
-    }
-
-    window.addEventListener('pointermove', handleMove)
-    window.addEventListener('pointerup', handleUp)
-    window.addEventListener('pointercancel', handleUp)
-
-    return () => {
-      window.removeEventListener('pointermove', handleMove)
-      window.removeEventListener('pointerup', handleUp)
-      window.removeEventListener('pointercancel', handleUp)
-    }
-  }, [dragState, imageMeta, stageWidth, zoom])
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
 
   const resetCropState = () => {
     setPendingSource('')
     setPendingName('')
-    setImageMeta(null)
+    setCrop({ x: 0, y: 0 })
     setZoom(1)
-    setOffset({ x: 0, y: 0 })
-    setDragState(null)
+    setCroppedAreaPixels(null)
+    setIsCropping(false)
   }
 
   const handlePickFile = () => {
+    if (inputRef.current) {
+      inputRef.current.value = ''
+    }
     inputRef.current?.click()
   }
 
@@ -113,6 +77,9 @@ export function FileUploadField({
     reader.onload = () => {
       setPendingSource(String(reader.result || ''))
       setPendingName(file.name)
+      setCrop({ x: 0, y: 0 })
+      setZoom(1)
+      setCroppedAreaPixels(null)
       setCropOpen(true)
       setIsReading(false)
     }
@@ -130,22 +97,28 @@ export function FileUploadField({
     resetCropState()
   }
 
-  const handleCropConfirm = () => {
-    if (!pendingSource || !imageMeta || !stageWidth) return
+  const onCropComplete = useCallback((_, areaPixels) => {
+    setCroppedAreaPixels(areaPixels)
+  }, [])
 
-    const image = new Image()
-    image.onload = () => {
-      const stageHeight = stageWidth / CARD_IMAGE_ASPECT_RATIO
-      const baseScale = Math.max(stageWidth / imageMeta.width, stageHeight / imageMeta.height)
-      const displayScale = baseScale * zoom
-      const cropSourceWidth = stageWidth / displayScale
-      const cropSourceHeight = stageHeight / displayScale
+  const handleCropConfirm = async () => {
+    if (!pendingSource || !croppedAreaPixels) return
 
-      let sourceX = imageMeta.width / 2 - cropSourceWidth / 2 - offset.x / displayScale
-      let sourceY = imageMeta.height / 2 - cropSourceHeight / 2 - offset.y / displayScale
-
-      sourceX = clamp(sourceX, 0, Math.max(0, imageMeta.width - cropSourceWidth))
-      sourceY = clamp(sourceY, 0, Math.max(0, imageMeta.height - cropSourceHeight))
+    setIsCropping(true)
+    try {
+      const image = await createImage(pendingSource)
+      const sourceX = clamp(Math.round(croppedAreaPixels.x), 0, Math.max(0, image.naturalWidth - 1))
+      const sourceY = clamp(Math.round(croppedAreaPixels.y), 0, Math.max(0, image.naturalHeight - 1))
+      const sourceWidth = clamp(
+        Math.round(croppedAreaPixels.width),
+        1,
+        Math.max(1, image.naturalWidth - sourceX),
+      )
+      const sourceHeight = clamp(
+        Math.round(croppedAreaPixels.height),
+        1,
+        Math.max(1, image.naturalHeight - sourceY),
+      )
 
       const canvas = document.createElement('canvas')
       canvas.width = CROP_OUTPUT_WIDTH
@@ -153,12 +126,16 @@ export function FileUploadField({
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      ctx.drawImage(image, sourceX, sourceY, cropSourceWidth, cropSourceHeight, 0, 0, canvas.width, canvas.height)
+      ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height)
       onChange(canvas.toDataURL('image/jpeg', 0.92))
       setCropOpen(false)
       resetCropState()
+      if (inputRef.current) {
+        inputRef.current.value = ''
+      }
+    } finally {
+      setIsCropping(false)
     }
-    image.src = pendingSource
   }
 
   const handleCropCancel = () => {
@@ -170,13 +147,6 @@ export function FileUploadField({
   }
 
   const hasPreview = isImageLike(value)
-  const stageHeight = stageWidth ? stageWidth / CARD_IMAGE_ASPECT_RATIO : 0
-  const baseScale = imageMeta && stageWidth ? Math.max(stageWidth / imageMeta.width, stageHeight / imageMeta.height) : 1
-  const displayScale = baseScale * zoom
-  const displayWidth = imageMeta ? imageMeta.width * displayScale : 0
-  const displayHeight = imageMeta ? imageMeta.height * displayScale : 0
-  const displayLeft = imageMeta ? (stageWidth - displayWidth) / 2 + offset.x : 0
-  const displayTop = imageMeta ? (stageHeight - displayHeight) / 2 + offset.y : 0
 
   return (
     <>
@@ -231,7 +201,7 @@ export function FileUploadField({
               <div>
                 <h2 className="text-2xl font-semibold tracking-[-0.03em] text-slate-900">裁剪图片</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  裁剪比例和商品卡一致，直接拖动图片并调整缩放。
+                  使用 React Easy Crop，拖动并缩放到商品卡的最佳展示范围。
                 </p>
               </div>
               <div className="rounded-full border border-slate-200/80 bg-white/75 px-3 py-2 text-xs text-slate-500 backdrop-blur-xl">
@@ -244,113 +214,85 @@ export function FileUploadField({
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_320px]">
               <div className="space-y-3">
                 <div
-                  ref={stageRef}
                   className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-slate-100 shadow-sm"
                   style={{ aspectRatio: CARD_IMAGE_ASPECT }}
-                  onPointerDown={(event) => {
-                    if (!imageMeta || !stageWidth) return
-                    event.currentTarget.setPointerCapture?.(event.pointerId)
-                    setDragState({
-                      startX: getPoint(event).x,
-                      startY: getPoint(event).y,
-                      originX: offset.x,
-                      originY: offset.y,
-                    })
-                  }}
                 >
                   {pendingSource ? (
-                    <img
-                      src={pendingSource}
-                      alt="crop preview"
-                      onLoad={(event) => {
-                        setImageMeta({
-                          width: event.currentTarget.naturalWidth,
-                          height: event.currentTarget.naturalHeight,
-                        })
-                        setZoom(1)
-                        setOffset({ x: 0, y: 0 })
-                      }}
-                      className="absolute left-0 top-0 select-none"
-                      style={{
-                        width: displayWidth,
-                        height: displayHeight,
-                        transform: `translate(${displayLeft}px, ${displayTop}px)`,
-                        cursor: dragState ? 'grabbing' : 'grab',
-                        userSelect: 'none',
-                        pointerEvents: 'none',
-                      }}
-                      draggable={false}
+                    <Cropper
+                      image={pendingSource}
+                      crop={crop}
+                      zoom={zoom}
+                      aspect={CARD_IMAGE_ASPECT_RATIO}
+                      minZoom={0.5}
+                      maxZoom={2}
+                      objectFit="cover"
+                      onCropChange={setCrop}
+                      onZoomChange={setZoom}
+                      onCropComplete={onCropComplete}
+                      showGrid={false}
                     />
                   ) : null}
 
-                  <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/30" />
-                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(15,23,42,0.03),rgba(15,23,42,0))]" />
                   <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-slate-950/70 px-3 py-1 text-[11px] font-medium text-white backdrop-blur-xl">
                     <Move className="mr-1 inline-block h-3.5 w-3.5" />
                     拖动调整位置
                   </div>
                 </div>
+              </div>
 
+              <div className="space-y-4">
                 <div className="rounded-[20px] border border-slate-200/80 bg-white/75 p-4 shadow-sm backdrop-blur-xl">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold text-slate-950">缩放</div>
                       <div className="mt-1 text-xs text-slate-500">让裁剪内容更贴近卡片展示</div>
                     </div>
-                    <div className="rounded-full bg-slate-50 px-3 py-1 text-xs text-slate-600">{zoom.toFixed(2)}x</div>
+                    <div className="rounded-full bg-slate-50 px-3 py-1 text-xs text-slate-600">{Math.round(zoom * 100)}%</div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    {ZOOM_PRESETS.map((preset) => {
+                      const active = Math.abs(zoom - preset.value) < 0.01
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setZoom(preset.value)}
+                          className={[
+                            'rounded-full border px-3 py-1 text-xs transition',
+                            active
+                              ? 'border-slate-900 bg-slate-900 text-white'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+                          ].join(' ')}
+                        >
+                          {preset.label}
+                        </button>
+                      )
+                    })}
                   </div>
                   <div className="mt-4 flex items-center gap-3">
                     <ZoomIn className="h-4 w-4 text-slate-400" />
                     <input
                       type="range"
-                      min="1"
-                      max="2.5"
+                      min="0.5"
+                      max="2"
                       step="0.01"
                       value={zoom}
-                      onChange={(event) => {
-                        const nextZoom = Number(event.target.value)
-                        setZoom(nextZoom)
-
-                        if (!imageMeta || !stageWidth) return
-                        const nextStageHeight = stageWidth / CARD_IMAGE_ASPECT_RATIO
-                        const nextBaseScale = Math.max(stageWidth / imageMeta.width, nextStageHeight / imageMeta.height)
-                        const nextDisplayScale = nextBaseScale * nextZoom
-                        const nextDisplayWidth = imageMeta.width * nextDisplayScale
-                        const nextDisplayHeight = imageMeta.height * nextDisplayScale
-                        const maxOffsetX = Math.max(0, (nextDisplayWidth - stageWidth) / 2)
-                        const maxOffsetY = Math.max(0, (nextDisplayHeight - nextStageHeight) / 2)
-                        setOffset((current) => ({
-                          x: clamp(current.x, -maxOffsetX, maxOffsetX),
-                          y: clamp(current.y, -maxOffsetY, maxOffsetY),
-                        }))
-                      }}
+                      onChange={(event) => setZoom(Number(event.target.value))}
                       className="h-2 w-full cursor-pointer accent-slate-900"
                     />
                   </div>
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                    <span>最小 1.00x</span>
-                    <span>最大 2.50x</span>
+                    <span>最小 50%</span>
+                    <span>最大 200%</span>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-4">
                 <div className="rounded-[22px] border border-slate-200/80 bg-white/75 p-4 shadow-sm backdrop-blur-xl">
                   <div className="text-sm font-semibold text-slate-950">说明</div>
                   <div className="mt-2 space-y-2 text-sm leading-6 text-slate-600">
                     <p>1. 裁剪比例和商品卡一致。</p>
                     <p>2. 拖动图片调整位置，右侧滑杆控制放大倍数。</p>
                     <p>3. 确认后会直接生成前端可保存的图片字符串。</p>
-                  </div>
-                </div>
-
-                <div className="rounded-[22px] border border-slate-200/80 bg-white/75 p-4 shadow-sm backdrop-blur-xl">
-                  <div className="text-sm font-semibold text-slate-950">输出预览</div>
-                  <div className="mt-3 overflow-hidden rounded-[18px] border border-slate-200 bg-slate-100" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
-                    {pendingSource ? <img src={pendingSource} alt="original" className="h-full w-full object-cover opacity-60" /> : null}
-                  </div>
-                  <div className="mt-3 text-xs text-slate-500">
-                    输出会被压成 {CROP_OUTPUT_WIDTH} x {CROP_OUTPUT_HEIGHT}，比例和卡片一致。
                   </div>
                 </div>
               </div>
@@ -362,9 +304,9 @@ export function FileUploadField({
               <Button variant="secondary" onClick={handleCropCancel}>
                 取消
               </Button>
-              <Button onClick={handleCropConfirm} disabled={!pendingSource || !imageMeta}>
+              <Button onClick={handleCropConfirm} disabled={!pendingSource || !croppedAreaPixels || isCropping}>
                 <Crop className="h-4 w-4" />
-                确认裁剪
+                {isCropping ? '生成中...' : '确认裁剪'}
               </Button>
             </div>
           </ModalFooter>

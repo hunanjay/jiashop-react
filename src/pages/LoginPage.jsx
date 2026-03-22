@@ -20,7 +20,7 @@ export default function LoginPage() {
     const session = await login(username, password)
     const destination =
       location.state?.from?.pathname ||
-      (session.role === 'user' ? '/workspace/my-products' : session.role === 'guest' ? '/' : '/admin')
+      (session.role === 'user' ? '/workspace' : session.role === 'guest' ? '/' : '/admin')
     navigate(destination, { replace: true })
   }
 

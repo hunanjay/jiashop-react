@@ -20,7 +20,7 @@ export default function ProductManagerCategoryPanel({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold tracking-[-0.03em] text-slate-950">类型字典</h3>
-          <p className="mt-1 text-sm text-slate-500">仅 Admin / SuperAdmin 可见</p>
+          <p className="mt-1 text-sm text-slate-500">开放给 User / Admin / SuperAdmin</p>
         </div>
         <Badge variant="outline">Category Manager</Badge>
       </div>
