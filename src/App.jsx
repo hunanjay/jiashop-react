@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 
 import { AppContext } from './lib/app-context'
 import { api, setAuthToken } from './lib/api'
@@ -7,6 +7,7 @@ import AdminLayout from './layouts/AdminLayout'
 import ClientLayout from './layouts/ClientLayout'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
+import CatalogPage from './pages/CatalogPage'
 import ProductDetailPage from './pages/ProductDetailPage'
 import CartPage from './pages/CartPage'
 import AdminDashboardPage from './pages/admin/DashboardPage'
@@ -30,6 +31,7 @@ const DEFAULT_CATEGORY_OPTIONS = [
 const STORAGE_KEYS = {
   session: 'giftcraft-session',
   cart: 'giftcraft-cart',
+  cartToken: 'giftcraft-cart-token',
   theme: 'giftcraft-theme',
 }
 
@@ -57,12 +59,39 @@ function loadTheme() {
   return stored === 'sun' ? 'sun' : 'night'
 }
 
+function createCartToken() {
+  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID()
+  }
+  return `cart-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function loadCartToken() {
+  if (typeof window === 'undefined') return createCartToken()
+  const existing = window.localStorage.getItem(STORAGE_KEYS.cartToken)
+  if (existing) return existing
+  const next = createCartToken()
+  window.localStorage.setItem(STORAGE_KEYS.cartToken, next)
+  return next
+}
+
+function toCartObject(items) {
+  return (items || []).reduce((acc, item) => {
+    const quantity = Number(item?.quantity || 0)
+    if (item?.product_id && quantity > 0) {
+      acc[item.product_id] = quantity
+    }
+    return acc
+  }, {})
+}
+
 function AppProvider({ children }) {
   const [session, setSession] = useState(loadSession)
   const [products, setProducts] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [catalogQuery, setCatalogQuery] = useState('')
   const [cart, setCart] = useState(loadCart)
+  const [cartToken] = useState(loadCartToken)
   const [toasts, setToasts] = useState([])
   const [loadingAuth, setLoadingAuth] = useState(false)
   const [categoryOptions, setCategoryOptions] = useState(DEFAULT_CATEGORY_OPTIONS)
@@ -132,6 +161,21 @@ function AppProvider({ children }) {
     loadProductCategories()
   }, [loadProductCategories])
 
+  const syncCartFromApi = useCallback(async () => {
+    try {
+      const response = await api.get('/cart', {
+        headers: { 'X-Cart-Token': cartToken },
+      })
+      setCart(toCartObject(response.data?.items))
+    } catch {
+      // Keep local cart when sync fails.
+    }
+  }, [cartToken])
+
+  useEffect(() => {
+    syncCartFromApi()
+  }, [syncCartFromApi])
+
   const login = useCallback(async (username, password) => {
     setLoadingAuth(true)
     try {
@@ -160,7 +204,7 @@ function AppProvider({ children }) {
     pushToast('info', '已退出登录')
   }, [pushToast])
 
-  const addToCart = useCallback((product, quantity = 1) => {
+  const addToCart = useCallback((product, quantity = 1, options = {}) => {
     setCart((current) => {
       const nextQty = Number(current[product.id] || 0) + quantity
       return {
@@ -168,8 +212,30 @@ function AppProvider({ children }) {
         [product.id]: Math.max(0, nextQty),
       }
     })
+    void api
+      .post(
+        '/cart/items',
+        { product_id: product.id, quantity },
+        { headers: { 'X-Cart-Token': cartToken } },
+      )
+      .then((response) => {
+        setCart(toCartObject(response.data?.items))
+      })
+      .catch(() => {
+        pushToast('error', '购物车同步失败', '已保留本地购物车')
+      })
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('giftcraft:cart-fly', {
+          detail: {
+            sourceRect: options?.sourceRect || null,
+            product,
+          },
+        }),
+      )
+    }
     pushToast('success', '已加入购物车', product.name)
-  }, [pushToast])
+  }, [cartToken, pushToast])
 
   const updateCartQuantity = useCallback((productId, quantity) => {
     setCart((current) => {
@@ -181,9 +247,31 @@ function AppProvider({ children }) {
       }
       return next
     })
-  }, [])
+    void api
+      .put(
+        `/cart/items/${productId}`,
+        { quantity },
+        { headers: { 'X-Cart-Token': cartToken } },
+      )
+      .then((response) => {
+        setCart(toCartObject(response.data?.items))
+      })
+      .catch(() => {
+        pushToast('error', '购物车同步失败', '请稍后重试')
+      })
+  }, [cartToken, pushToast])
 
-  const clearCart = useCallback(() => setCart({}), [])
+  const clearCart = useCallback(() => {
+    setCart({})
+    void api
+      .delete('/cart', { headers: { 'X-Cart-Token': cartToken } })
+      .then((response) => {
+        setCart(toCartObject(response.data?.items))
+      })
+      .catch(() => {
+        pushToast('error', '清空购物车失败', '请稍后重试')
+      })
+  }, [cartToken, pushToast])
   const toggleTheme = useCallback(() => {
     setTheme((current) => (current === 'night' ? 'sun' : 'night'))
   }, [])
@@ -203,8 +291,8 @@ function AppProvider({ children }) {
   }, [cart, products])
 
   const cartCount = useMemo(
-    () => Object.values(cart).reduce((sum, quantity) => sum + Number(quantity || 0), 0),
-    [cart],
+    () => cartItems.length,
+    [cartItems],
   )
 
   const cartTotal = useMemo(
@@ -289,12 +377,19 @@ function RequireRole({ roles, children }) {
   return children
 }
 
+function LegacyProductRouteRedirect() {
+  const { id } = useParams()
+  return <Navigate to={id ? `/catalog/${id}` : '/catalog'} replace />
+}
+
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/catalog" element={<CatalogPage />} />
+      <Route path="/catalog/:id" element={<ProductDetailPage />} />
+      <Route path="/product/:id" element={<LegacyProductRouteRedirect />} />
       <Route element={<ClientLayout />}>
-        <Route index element={<HomePage />} />
-        <Route path="/product/:id" element={<ProductDetailPage />} />
         <Route path="/cart" element={<CartPage />} />
       </Route>
 

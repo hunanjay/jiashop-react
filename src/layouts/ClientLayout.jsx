@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Outlet, Link, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Home, ShoppingBag, User2, Search, ShoppingCart, Menu } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../c
 
 export default function ClientLayout() {
   const { session, cartCount, catalogQuery, setCatalogQuery } = useApp()
+  const location = useLocation()
   const navigate = useNavigate()
   const debouncedQuery = useDebounce(catalogQuery, 300)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -47,6 +48,15 @@ export default function ClientLayout() {
 
   const hasPreview = searchOpen && debouncedQuery.trim().length > 0
   const activeProduct = useMemo(() => searchResults[activeIndex] || null, [searchResults, activeIndex])
+  const isCartPage = location.pathname === '/cart'
+
+  if (isCartPage) {
+    return (
+      <div className="home-page-theme min-h-screen bg-[var(--surface)] text-[var(--on-surface)]">
+        <Outlet />
+      </div>
+    )
+  }
 
   const handleSearchKeyDown = (event) => {
     if (!hasPreview) return
@@ -60,7 +70,7 @@ export default function ClientLayout() {
     }
     if (event.key === 'Enter' && activeProduct) {
       event.preventDefault()
-      navigate(`/product/${activeProduct.id}`)
+      navigate(`/catalog/${activeProduct.id}`)
       setSearchOpen(false)
     }
     if (event.key === 'Escape') {
@@ -116,7 +126,7 @@ export default function ClientLayout() {
                           onMouseEnter={() => setActiveIndex(index)}
                           onClick={() => {
                             setSearchOpen(false)
-                            navigate(`/product/${product.id}`)
+                            navigate(`/catalog/${product.id}`)
                           }}
                           className={[
                             'flex w-full items-center gap-4 rounded-3xl p-3 text-left transition',
@@ -151,6 +161,7 @@ export default function ClientLayout() {
             <Link
               to="/cart"
               className="relative inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 text-sm font-medium text-white shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 hover:bg-white/10"
+              aria-label="查看购物车"
             >
               <ShoppingCart className="h-4 w-4" />
               购物车

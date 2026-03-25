@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/home_theme.css";
 
 :root {
   color-scheme: dark;
@@ -91,6 +92,23 @@ select {
   50% {
     transform: scale(1.03);
     box-shadow: 0 0 0 6px rgba(192, 132, 252, 0.12);
+  }
+}
+
+@keyframes cart-fly {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  55% {
+    opacity: 1;
+    transform: translate(calc(-50% + (var(--cart-fly-dx) * 0.72)), calc(-50% + (var(--cart-fly-dy) * 0.72))) scale(0.62);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--cart-fly-dx)), calc(-50% + var(--cart-fly-dy))) scale(0.22);
   }
 }
 

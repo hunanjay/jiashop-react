@@ -1,6 +1,6 @@
-const currencyFormatter = new Intl.NumberFormat('en-US', {
+const currencyFormatter = new Intl.NumberFormat('zh-CN', {
   style: 'currency',
-  currency: 'USD',
+  currency: 'CNY',
 })
 
 export function formatCurrency(value) {
@@ -17,4 +17,3 @@ export function formatDateTime(value) {
     minute: '2-digit',
   }).format(new Date(value))
 }
-
