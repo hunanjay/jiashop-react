@@ -6,11 +6,10 @@ import 'react-easy-crop/react-easy-crop.css'
 import { cn } from '../../lib/utils'
 import { Button } from './button'
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from './modal'
+import { api } from '../../lib/api'
 
 export const CARD_IMAGE_ASPECT = '5 / 4'
 const CARD_IMAGE_ASPECT_RATIO = 5 / 4
-const CROP_OUTPUT_WIDTH = 1200
-const CROP_OUTPUT_HEIGHT = Math.round(CROP_OUTPUT_WIDTH / CARD_IMAGE_ASPECT_RATIO)
 const ZOOM_PRESETS = [
   { label: '50%', value: 0.5 },
   { label: '100%', value: 1 },
@@ -121,13 +120,23 @@ export function FileUploadField({
       )
 
       const canvas = document.createElement('canvas')
-      canvas.width = CROP_OUTPUT_WIDTH
-      canvas.height = CROP_OUTPUT_HEIGHT
+      let outputWidth = sourceWidth
+      let outputHeight = sourceHeight
+      // 防止图片过大，最宽限制在 1200
+      if (outputWidth > 1200) {
+        outputWidth = 1200
+        outputHeight = Math.round(1200 / CARD_IMAGE_ASPECT_RATIO)
+      }
+      canvas.width = outputWidth
+      canvas.height = outputHeight
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
       ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height)
-      onChange(canvas.toDataURL('image/jpeg', 0.92))
+      const base64Image = canvas.toDataURL('image/jpeg', 0.92)
+      
+      onChange(base64Image)
+
       setCropOpen(false)
       resetCropState()
       if (inputRef.current) {
@@ -187,7 +196,11 @@ export function FileUploadField({
           ) : null}
         </div>
 
-        {value ? (
+        {value && value.startsWith('http') ? (
+          <div className="truncate rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            已上传到 OSS
+          </div>
+        ) : value ? (
           <div className="truncate rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
             已保存前端裁剪结果，长度 {value.length}
           </div>
@@ -223,9 +236,10 @@ export function FileUploadField({
                       crop={crop}
                       zoom={zoom}
                       aspect={CARD_IMAGE_ASPECT_RATIO}
-                      minZoom={0.5}
-                      maxZoom={2}
-                      objectFit="cover"
+                      minZoom={0.1}
+                      maxZoom={5}
+                      restrictPosition={false}
+                      objectFit="contain"
                       onCropChange={setCrop}
                       onZoomChange={setZoom}
                       onCropComplete={onCropComplete}
@@ -273,8 +287,8 @@ export function FileUploadField({
                     <ZoomIn className="h-4 w-4 text-slate-400" />
                     <input
                       type="range"
-                      min="0.5"
-                      max="2"
+                      min="0.1"
+                      max="5"
                       step="0.01"
                       value={zoom}
                       onChange={(event) => setZoom(Number(event.target.value))}
@@ -282,8 +296,8 @@ export function FileUploadField({
                     />
                   </div>
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                    <span>最小 50%</span>
-                    <span>最大 200%</span>
+                    <span>最小 10%</span>
+                    <span>最大 500%</span>
                   </div>
                 </div>
 

@@ -251,11 +251,20 @@ export default function ProductManagerPage({ scope = 'admin' }) {
     if (!pendingSavePayload) return
     setSaving(true)
     try {
+      let finalPayload = { ...pendingSavePayload }
+
+      // 如果包含 base64 格式的商品图，则先进行统一上传
+      if (finalPayload.image_url && finalPayload.image_url.startsWith('data:')) {
+        const uploadRes = await api.post('/upload', { image: finalPayload.image_url })
+        finalPayload.image_url = uploadRes.data.key
+      }
+
+
       if (selectedId) {
-        await api.put(`/products/${selectedId}`, pendingSavePayload)
+        await api.put(`/products/${selectedId}`, finalPayload)
         pushToast('success', '商品已更新')
       } else {
-        await api.post('/products', pendingSavePayload)
+        await api.post('/products', finalPayload)
         pushToast('success', '商品已创建')
       }
 

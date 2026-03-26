@@ -231,11 +231,23 @@ export default function OrdersPage({ scope = 'admin' }) {
     if (!pendingSavePayload) return
     setSaving(true)
     try {
+      let finalPayload = { ...pendingSavePayload }
+
+      if (finalPayload.custom_logo_url && finalPayload.custom_logo_url.startsWith('data:')) {
+        const uploadRes = await api.post('/upload', { image: finalPayload.custom_logo_url })
+        finalPayload.custom_logo_url = uploadRes.data.key
+      }
+      if (finalPayload.design_file_url && finalPayload.design_file_url.startsWith('data:')) {
+        const uploadRes = await api.post('/upload', { image: finalPayload.design_file_url })
+        finalPayload.design_file_url = uploadRes.data.key
+      }
+
+
       if (selectedId) {
-        await api.put(`/admin/orders/${selectedId}/status`, { status: pendingSavePayload.status })
+        await api.put(`/admin/orders/${selectedId}/status`, { status: finalPayload.status })
         pushToast('success', '订单状态已更新')
       } else {
-        await api.post(scope === 'workspace' ? '/workspace/orders' : '/admin/orders', pendingSavePayload)
+        await api.post(scope === 'workspace' ? '/workspace/orders' : '/admin/orders', finalPayload)
         pushToast('success', '订单已创建')
       }
       await refreshOrders()
