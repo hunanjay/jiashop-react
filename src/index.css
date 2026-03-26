@@ -2,19 +2,19 @@
 @import "./styles/home_theme.css";
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue",
     Helvetica, Arial, sans-serif;
-  --bg-main: #09090b;
-  --bg-soft: rgba(17, 17, 23, 0.72);
-  --bg-glass: rgba(255, 255, 255, 0.06);
-  --border-soft: rgba(255, 255, 255, 0.12);
-  --text-strong: #f4f4f5;
-  --text-soft: #a1a1aa;
-  --accent-blue: #38bdf8;
-  --accent-purple: #c084fc;
-  --accent-cyan: #67e8f9;
+  --bg-main: #f9f9fe;
+  --bg-soft: rgba(242, 243, 250, 0.82);
+  --bg-glass: rgba(255, 255, 255, 0.7);
+  --border-soft: rgba(0, 0, 0, 0.08);
+  --text-strong: #1e293b;
+  --text-soft: #64748b;
+  --accent-blue: #005bc1;
+  --accent-purple: #7c3aed;
+  --accent-cyan: #0891b2;
 }
 
 html,
@@ -26,11 +26,7 @@ body,
 body {
   margin: 0;
   font-family: var(--font-family);
-  background:
-    radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 26%),
-    radial-gradient(circle at top right, rgba(192, 132, 252, 0.14), transparent 24%),
-    radial-gradient(circle at bottom, rgba(34, 197, 94, 0.08), transparent 18%),
-    linear-gradient(180deg, #09090b 0%, #0d0d12 48%, #111114 100%);
+  background: var(--bg-main);
   color: var(--text-strong);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -126,20 +122,26 @@ select {
   background: rgba(255, 255, 255, 0.04);
 }
 
-/* Sun theme readability adjustments for admin/workspace pages */
-.admin-shell.theme-sun .text-white {
-  color: #0f172a !important;
+.admin-shell.theme-sun {
+  color: #0f172a;
 }
 
 .admin-shell.theme-sun .text-zinc-100,
 .admin-shell.theme-sun .text-zinc-200,
-.admin-shell.theme-sun .text-zinc-300 {
-  color: #1e293b !important;
-}
-
+.admin-shell.theme-sun .text-zinc-300,
 .admin-shell.theme-sun .text-zinc-400,
 .admin-shell.theme-sun .text-zinc-500 {
   color: #475569 !important;
+}
+
+.admin-shell.theme-sun .text-white {
+  color: #0f172a !important;
+}
+
+.admin-shell.theme-sun .text-white\/70,
+.admin-shell.theme-sun .text-white\/80,
+.admin-shell.theme-sun .text-white\/90 {
+  color: #334155 !important;
 }
 
 .admin-shell.theme-sun .border-white\/10 {
@@ -148,6 +150,7 @@ select {
 
 .admin-shell.theme-sun .bg-white\/5,
 .admin-shell.theme-sun .bg-white\/6,
+.admin-shell.theme-sun .bg-white\/8,
 .admin-shell.theme-sun .bg-white\/10 {
-  background-color: rgba(255, 255, 255, 0.78) !important;
+  background-color: rgba(255, 255, 255, 0.82) !important;
 }

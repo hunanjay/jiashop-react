@@ -6,11 +6,9 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Moon,
   Package,
   ReceiptText,
   ShieldCheck,
-  Sun,
   Users,
 } from 'lucide-react'
 
@@ -36,7 +34,7 @@ const workspaceNavigation = [
 ]
 
 export default function AdminLayout({ scope = 'admin' }) {
-  const { session, logout, isSuperAdmin, theme, toggleTheme } = useApp()
+  const { session, logout, isSuperAdmin } = useApp()
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const navigate = useNavigate()
 
@@ -45,42 +43,25 @@ export default function AdminLayout({ scope = 'admin' }) {
   const isWorkspaceScope = scope === 'workspace'
   const menuTitle = isWorkspaceScope ? '工作台菜单' : '管理菜单'
   const panelLabel = isWorkspaceScope ? 'Workspace' : 'Ops Panel'
-  const isSunTheme = theme === 'sun'
-  const appTextClass = isSunTheme ? 'text-zinc-900' : 'text-zinc-100'
-  const shellBackgroundClass = isSunTheme
-    ? 'bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.15),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.16),_transparent_24%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_52%,_#ecfeff_100%)]'
-    : 'bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_26%),radial-gradient(circle_at_top_right,_rgba(192,132,252,0.14),_transparent_24%),radial-gradient(circle_at_bottom,_rgba(34,197,94,0.08),_transparent_18%),linear-gradient(180deg,_#09090b_0%,_#0d0d12_48%,_#111114_100%)]'
-  const navClass = isSunTheme
-    ? 'border-b border-sky-200/70 bg-white/75 px-3 py-2.5 backdrop-blur-2xl lg:px-4'
-    : 'border-b border-white/10 bg-black/45 px-3 py-2.5 backdrop-blur-2xl lg:px-4'
-  const appNameClass = isSunTheme ? 'text-zinc-900' : 'text-white'
-  const panelClass = isSunTheme ? 'text-sky-700/70' : 'text-zinc-500'
-  const activeNavClass = isSunTheme
-    ? 'bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 text-white shadow-[0_14px_30px_rgba(14,165,233,0.24)]'
-    : 'bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400 text-white shadow-[0_14px_30px_rgba(99,102,241,0.24)]'
-  const inactiveNavClass = isSunTheme
-    ? 'bg-white/80 text-slate-700 hover:bg-white hover:text-slate-900 border border-sky-100'
-    : 'bg-white/6 text-zinc-400 hover:bg-white/10 hover:text-white'
-  const accountCardClass = isSunTheme
-    ? 'ml-auto hidden items-center gap-3 rounded-full border border-sky-200 bg-white/80 px-2 py-1.5 shadow-sm sm:flex'
-    : 'ml-auto hidden items-center gap-3 rounded-full border border-white/10 bg-white/6 px-2 py-1.5 shadow-sm sm:flex'
-  const usernameClass = isSunTheme ? 'text-zinc-900' : 'text-white'
-  const roleClass = isSunTheme ? 'text-sky-700/70' : 'text-zinc-500'
-  const iconButtonClass = isSunTheme
-    ? 'inline-flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition hover:bg-sky-200 hover:text-sky-900'
-    : 'inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/8 text-zinc-300 transition hover:bg-white/12 hover:text-white'
-  const chevronClass = isSunTheme ? 'h-4 w-4 text-sky-700/70' : 'h-4 w-4 text-zinc-500'
-  const mobileMenuButtonClass = isSunTheme
-    ? 'inline-flex h-9 w-9 items-center justify-center rounded-full border border-sky-200 bg-white/80 text-sky-800 shadow-sm'
-    : 'inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/6 text-white shadow-sm'
-  const sheetClass = isSunTheme ? 'max-w-[320px] bg-[#f8fafc]/95 text-slate-900' : 'max-w-[320px] bg-[#111114]/95 text-white'
-  const mobileActiveNavClass = isSunTheme
-    ? 'bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 text-white'
-    : 'bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400 text-white'
-  const mobileInactiveNavClass = isSunTheme ? 'bg-white text-slate-700 shadow-sm border border-sky-100' : 'bg-white/6 text-zinc-300 shadow-sm'
+  const appTextClass = 'text-zinc-900'
+  const shellBackgroundClass = 'bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.15),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.16),_transparent_24%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_52%,_#ecfeff_100%)]'
+  const navClass = 'border-b border-sky-200/70 bg-white/75 px-3 py-2.5 backdrop-blur-2xl lg:px-4'
+  const appNameClass = 'text-zinc-900'
+  const panelClass = 'text-sky-700/70'
+  const activeNavClass = 'bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 text-white shadow-[0_14px_30px_rgba(14,165,233,0.24)]'
+  const inactiveNavClass = 'border border-sky-100 bg-white/80 text-slate-700 hover:bg-white hover:text-slate-900'
+  const accountCardClass = 'ml-auto hidden items-center gap-3 rounded-full border border-sky-200 bg-white/80 px-2 py-1.5 shadow-sm sm:flex'
+  const usernameClass = 'text-zinc-900'
+  const roleClass = 'text-sky-700/70'
+  const iconButtonClass = 'inline-flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition hover:bg-sky-200 hover:text-sky-900'
+  const chevronClass = 'h-4 w-4 text-sky-700/70'
+  const mobileMenuButtonClass = 'inline-flex h-9 w-9 items-center justify-center rounded-full border border-sky-200 bg-white/80 text-sky-800 shadow-sm'
+  const sheetClass = 'max-w-[320px] bg-[#f8fafc]/95 text-slate-900'
+  const mobileActiveNavClass = 'bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 text-white'
+  const mobileInactiveNavClass = 'border border-sky-100 bg-white text-slate-700 shadow-sm'
 
   return (
-    <div className={`admin-shell min-h-screen theme-${theme} ${appTextClass}`}>
+    <div className={`admin-shell min-h-screen theme-sun ${appTextClass}`}>
       <div className={`min-h-screen w-full ${shellBackgroundClass}`}>
         <nav className={navClass}>
           <div className="flex items-center gap-3">
@@ -126,14 +107,6 @@ export default function AdminLayout({ scope = 'admin' }) {
               </div>
               <button
                 type="button"
-                onClick={toggleTheme}
-                className={iconButtonClass}
-                title={isSunTheme ? '切换到夜间主题' : '切换到日间主题'}
-              >
-                {isSunTheme ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-              </button>
-              <button
-                type="button"
                 onClick={() => setLogoutConfirmOpen(true)}
                 className={iconButtonClass}
               >
@@ -154,16 +127,6 @@ export default function AdminLayout({ scope = 'admin' }) {
                     <SheetTitle>{menuTitle}</SheetTitle>
                   </SheetHeader>
                   <div className="space-y-3 p-5">
-                    <button
-                      type="button"
-                      onClick={toggleTheme}
-                      className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                        isSunTheme ? 'bg-sky-100 text-sky-800' : 'bg-white/10 text-zinc-200'
-                      }`}
-                    >
-                      {isSunTheme ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                      {isSunTheme ? '切换夜间主题' : '切换日间主题'}
-                    </button>
                     {visibleNavigation.map((item) => (
                       <NavLink
                         key={item.to}

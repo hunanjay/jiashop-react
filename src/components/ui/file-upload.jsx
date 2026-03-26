@@ -1,36 +1,13 @@
-import { useCallback, useRef, useState } from 'react'
-import { Crop, FileImage, Move, Upload, X, ZoomIn } from 'lucide-react'
-import Cropper from 'react-easy-crop'
-import 'react-easy-crop/react-easy-crop.css'
+import { useEffect, useRef, useState } from 'react'
+import { Crop, Edit, RotateCcw, Upload, X } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
-import { Button } from './button'
-import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from './modal'
-import { api } from '../../lib/api'
+import { ImageCropModal } from './ImageCropModal'
 
-export const CARD_IMAGE_ASPECT = '5 / 4'
-const CARD_IMAGE_ASPECT_RATIO = 5 / 4
-const ZOOM_PRESETS = [
-  { label: '50%', value: 0.5 },
-  { label: '100%', value: 1 },
-  { label: '200%', value: 2 },
-]
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value))
-}
+export const CARD_IMAGE_ASPECT = '3 / 4'
 
 function isImageLike(value) {
   return typeof value === 'string' && (value.startsWith('data:image/') || /\.(avif|bmp|gif|heic|jpeg|jpg|png|svg|webp)(\?|#|$)/i.test(value))
-}
-
-function createImage(src) {
-  return new Promise((resolve, reject) => {
-    const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = reject
-    image.src = src
-  })
 }
 
 export function FileUploadField({
@@ -38,26 +15,17 @@ export function FileUploadField({
   value,
   onChange,
   accept = 'image/*',
-  helperText = '上传后会在前端转换并裁剪成卡片比例',
   className,
 }) {
   const inputRef = useRef(null)
-  const [isReading, setIsReading] = useState(false)
-  const [isCropping, setIsCropping] = useState(false)
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingSource, setPendingSource] = useState('')
   const [pendingName, setPendingName] = useState('')
-  const [crop, setCrop] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
+  const originalSourceRef = useRef('')
 
   const resetCropState = () => {
     setPendingSource('')
     setPendingName('')
-    setCrop({ x: 0, y: 0 })
-    setZoom(1)
-    setCroppedAreaPixels(null)
-    setIsCropping(false)
   }
 
   const handlePickFile = () => {
@@ -71,83 +39,55 @@ export function FileUploadField({
     const file = event.target.files?.[0]
     if (!file) return
 
-    setIsReading(true)
     const reader = new FileReader()
     reader.onload = () => {
-      setPendingSource(String(reader.result || ''))
+      const source = String(reader.result || '')
+      originalSourceRef.current = source
+      setPendingSource(source)
       setPendingName(file.name)
-      setCrop({ x: 0, y: 0 })
-      setZoom(1)
-      setCroppedAreaPixels(null)
       setCropOpen(true)
-      setIsReading(false)
-    }
-    reader.onerror = () => {
-      setIsReading(false)
     }
     reader.readAsDataURL(file)
   }
 
   const handleClear = () => {
     onChange('')
+    originalSourceRef.current = ''
     if (inputRef.current) {
       inputRef.current.value = ''
     }
     resetCropState()
   }
 
-  const onCropComplete = useCallback((_, areaPixels) => {
-    setCroppedAreaPixels(areaPixels)
-  }, [])
+  const handleEditImage = () => {
+    if (!originalSourceRef.current) {
+      handlePickFile()
+      return
+    }
 
-  const handleCropConfirm = async () => {
-    if (!pendingSource || !croppedAreaPixels) return
+    setPendingSource(originalSourceRef.current)
+    setPendingName(pendingName || label)
+    setCropOpen(true)
+  }
 
-    setIsCropping(true)
-    try {
-      const image = await createImage(pendingSource)
-      const sourceX = clamp(Math.round(croppedAreaPixels.x), 0, Math.max(0, image.naturalWidth - 1))
-      const sourceY = clamp(Math.round(croppedAreaPixels.y), 0, Math.max(0, image.naturalHeight - 1))
-      const sourceWidth = clamp(
-        Math.round(croppedAreaPixels.width),
-        1,
-        Math.max(1, image.naturalWidth - sourceX),
-      )
-      const sourceHeight = clamp(
-        Math.round(croppedAreaPixels.height),
-        1,
-        Math.max(1, image.naturalHeight - sourceY),
-      )
+  const handleRestoreOriginal = () => {
+    if (originalSourceRef.current) {
+      onChange(originalSourceRef.current)
+    }
+  }
 
-      const canvas = document.createElement('canvas')
-      let outputWidth = sourceWidth
-      let outputHeight = sourceHeight
-      // 防止图片过大，最宽限制在 1200
-      if (outputWidth > 1200) {
-        outputWidth = 1200
-        outputHeight = Math.round(1200 / CARD_IMAGE_ASPECT_RATIO)
-      }
-      canvas.width = outputWidth
-      canvas.height = outputHeight
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-
-      ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height)
-      const base64Image = canvas.toDataURL('image/jpeg', 0.92)
-      
-      onChange(base64Image)
-
-      setCropOpen(false)
+  const handleCropOpenChange = (open) => {
+    setCropOpen(open)
+    if (!open) {
       resetCropState()
       if (inputRef.current) {
         inputRef.current.value = ''
       }
-    } finally {
-      setIsCropping(false)
     }
   }
 
-  const handleCropCancel = () => {
+  const handleCropComplete = async (base64Image) => {
+    onChange(base64Image)
     setCropOpen(false)
     resetCropState()
     if (inputRef.current) {
@@ -159,173 +99,287 @@ export function FileUploadField({
 
   return (
     <>
-      <div className={cn('space-y-3 rounded-[22px] border border-slate-200/80 bg-white/75 p-4 shadow-sm backdrop-blur-xl', className)}>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold text-slate-950">{label}</div>
-            <div className="mt-1 text-xs text-slate-500">{helperText}</div>
-          </div>
-          <FileImage className="h-4 w-4 text-slate-400" />
-        </div>
-
-        <input ref={inputRef} type="file" accept={accept} onChange={handleFileChange} className="hidden" />
-
+      <div className={cn('overflow-hidden rounded-3xl border border-black/5 bg-slate-50/50 shadow-inner transition-all', className)}>
         {hasPreview ? (
-          <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-slate-100" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
+          <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-200">
             <img src={value} alt={label} className="h-full w-full object-cover" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 transition-opacity hover:opacity-100">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleEditImage}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-slate-950 shadow-lg backdrop-blur-md transition hover:bg-white"
+                  title="编辑图片"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRestoreOriginal}
+                  disabled={!originalSourceRef.current}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-slate-950 shadow-lg backdrop-blur-md transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  title="恢复原图"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePickFile}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-slate-950 shadow-lg backdrop-blur-md transition hover:bg-white"
+                  title="更换图片"
+                >
+                  <Upload className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/80 text-white shadow-lg backdrop-blur-md transition hover:bg-rose-600"
+                  title="删除"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold text-slate-800 backdrop-blur-md ring-1 ring-black/5 shadow-sm">
+              <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+              主图规格 3:4
+            </div>
           </div>
         ) : (
-          <div
-            className="flex items-center justify-center rounded-[18px] border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-400"
-            style={{ aspectRatio: CARD_IMAGE_ASPECT }}
+          <button
+            type="button"
+            onClick={handlePickFile}
+            className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 bg-white/40 text-slate-400 transition-colors hover:bg-white hover:text-slate-600"
           >
-            预览会显示在这里
-          </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 shadow-sm ring-1 ring-black/5">
+              <Upload className="h-5 w-5" />
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest">{label}</p>
+              <p className="mt-1 text-[9px] opacity-60">点击上传封面</p>
+            </div>
+          </button>
         )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="secondary" onClick={handlePickFile} disabled={isReading}>
-            <Upload className="h-4 w-4" />
-            {isReading ? '处理中...' : '选择文件'}
-          </Button>
-          {value ? (
-            <Button type="button" variant="ghost" onClick={handleClear} className="text-slate-500">
-              <X className="h-4 w-4" />
-              清空
-            </Button>
-          ) : null}
-        </div>
-
-        {value && value.startsWith('http') ? (
-          <div className="truncate rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            已上传到 OSS
-          </div>
-        ) : value ? (
-          <div className="truncate rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            已保存前端裁剪结果，长度 {value.length}
-          </div>
-        ) : null}
+        <input ref={inputRef} type="file" accept={accept} onChange={handleFileChange} className="hidden" />
       </div>
 
-      <Modal open={cropOpen} onOpenChange={(open) => (!open ? handleCropCancel() : setCropOpen(open))}>
-        <ModalContent className="max-w-6xl border-white/60 bg-white/80 shadow-[0_40px_120px_rgba(15,23,42,0.28)]">
-          <ModalHeader className="border-white/70 bg-white/80">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-[-0.03em] text-slate-900">裁剪图片</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  使用 React Easy Crop，拖动并缩放到商品卡的最佳展示范围。
-                </p>
-              </div>
-              <div className="rounded-full border border-slate-200/80 bg-white/75 px-3 py-2 text-xs text-slate-500 backdrop-blur-xl">
-                {pendingName || '未命名文件'}
-              </div>
-            </div>
-          </ModalHeader>
-
-          <ModalBody>
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_320px]">
-              <div className="space-y-3">
-                <div
-                  className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-slate-100 shadow-sm"
-                  style={{ aspectRatio: CARD_IMAGE_ASPECT }}
-                >
-                  {pendingSource ? (
-                    <Cropper
-                      image={pendingSource}
-                      crop={crop}
-                      zoom={zoom}
-                      aspect={CARD_IMAGE_ASPECT_RATIO}
-                      minZoom={0.1}
-                      maxZoom={5}
-                      restrictPosition={false}
-                      objectFit="contain"
-                      onCropChange={setCrop}
-                      onZoomChange={setZoom}
-                      onCropComplete={onCropComplete}
-                      showGrid={false}
-                    />
-                  ) : null}
-
-                  <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-slate-950/70 px-3 py-1 text-[11px] font-medium text-white backdrop-blur-xl">
-                    <Move className="mr-1 inline-block h-3.5 w-3.5" />
-                    拖动调整位置
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="rounded-[20px] border border-slate-200/80 bg-white/75 p-4 shadow-sm backdrop-blur-xl">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-semibold text-slate-950">缩放</div>
-                      <div className="mt-1 text-xs text-slate-500">让裁剪内容更贴近卡片展示</div>
-                    </div>
-                    <div className="rounded-full bg-slate-50 px-3 py-1 text-xs text-slate-600">{Math.round(zoom * 100)}%</div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    {ZOOM_PRESETS.map((preset) => {
-                      const active = Math.abs(zoom - preset.value) < 0.01
-                      return (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => setZoom(preset.value)}
-                          className={[
-                            'rounded-full border px-3 py-1 text-xs transition',
-                            active
-                              ? 'border-slate-900 bg-slate-900 text-white'
-                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
-                          ].join(' ')}
-                        >
-                          {preset.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className="mt-4 flex items-center gap-3">
-                    <ZoomIn className="h-4 w-4 text-slate-400" />
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="5"
-                      step="0.01"
-                      value={zoom}
-                      onChange={(event) => setZoom(Number(event.target.value))}
-                      className="h-2 w-full cursor-pointer accent-slate-900"
-                    />
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                    <span>最小 10%</span>
-                    <span>最大 500%</span>
-                  </div>
-                </div>
-
-                <div className="rounded-[22px] border border-slate-200/80 bg-white/75 p-4 shadow-sm backdrop-blur-xl">
-                  <div className="text-sm font-semibold text-slate-950">说明</div>
-                  <div className="mt-2 space-y-2 text-sm leading-6 text-slate-600">
-                    <p>1. 裁剪比例和商品卡一致。</p>
-                    <p>2. 拖动图片调整位置，右侧滑杆控制放大倍数。</p>
-                    <p>3. 确认后会直接生成前端可保存的图片字符串。</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ModalBody>
-
-          <ModalFooter className="border-white/70 bg-white/80">
-            <div className="flex items-center justify-end gap-3">
-              <Button variant="secondary" onClick={handleCropCancel}>
-                取消
-              </Button>
-              <Button onClick={handleCropConfirm} disabled={!pendingSource || !croppedAreaPixels || isCropping}>
-                <Crop className="h-4 w-4" />
-                {isCropping ? '生成中...' : '确认裁剪'}
-              </Button>
-            </div>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <ImageCropModal
+        open={cropOpen}
+        onOpenChange={handleCropOpenChange}
+        source={pendingSource}
+        onComplete={handleCropComplete}
+        title="裁剪图片"
+        subtitle="Precision Cropping Dashboard"
+        badge={pendingName || 'Untitled Asset'}
+        minZoom={0.1}
+        maxZoom={5}
+        confirmText="同步裁剪结果"
+        savingText="正在生成..."
+      />
     </>
+  )
+}
+
+export function MultiFileUploadField({
+  label,
+  values = [],
+  onChange,
+  className,
+}) {
+  const inputRef = useRef(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [internalCropOpen, setInternalCropOpen] = useState(false)
+  const [editIndex, setEditIndex] = useState(-1)
+  const [editSource, setEditSource] = useState('')
+  const originalSourcesRef = useRef(values.slice())
+
+  useEffect(() => {
+    if (originalSourcesRef.current.length !== values.length) {
+      originalSourcesRef.current = values.slice()
+    }
+  }, [values])
+
+  const handlePickFiles = () => {
+    if (values.length >= 5) return
+    if (inputRef.current) inputRef.current.value = ''
+    inputRef.current?.click()
+  }
+
+  const processFiles = async (files) => {
+    if (!files || files.length === 0) return
+    const remainingSlots = 5 - values.length
+    if (remainingSlots <= 0) return
+
+    const newImages = []
+    const limitedFiles = Array.from(files).slice(0, remainingSlots)
+    
+    for (const file of limitedFiles) {
+      if (!file.type.startsWith('image/')) continue
+      const reader = new FileReader()
+      const promise = new Promise((resolve) => {
+        reader.onload = () => resolve(String(reader.result || ''))
+        reader.readAsDataURL(file)
+      })
+      const base64 = await promise
+      newImages.push(base64)
+    }
+    
+    if (newImages.length > 0) {
+      originalSourcesRef.current = [...originalSourcesRef.current.slice(0, values.length), ...newImages]
+      onChange([...values, ...newImages])
+    }
+  }
+
+  const handleFileChange = (e) => processFiles(e.target.files)
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = () => setIsDragging(false)
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setIsDragging(false)
+    processFiles(e.dataTransfer.files)
+  }
+
+  const removeImage = (index) => {
+    const next = [...values]
+    next.splice(index, 1)
+    const nextOriginals = [...originalSourcesRef.current]
+    nextOriginals.splice(index, 1)
+    originalSourcesRef.current = nextOriginals
+    onChange(next)
+  }
+
+  const startCrop = (index) => {
+    setEditIndex(index)
+    setEditSource(originalSourcesRef.current[index] || values[index])
+    setInternalCropOpen(true)
+  }
+
+  const restoreImage = (index) => {
+    const original = originalSourcesRef.current[index]
+    if (!original) return
+    const next = [...values]
+    next[index] = original
+    onChange(next)
+  }
+
+  const handleApplyCrop = (newBase64) => {
+    if (editIndex >= 0) {
+      const next = [...values]
+      next[editIndex] = newBase64
+      if (!originalSourcesRef.current[editIndex]) {
+        originalSourcesRef.current[editIndex] = editSource
+      }
+      onChange(next)
+    }
+  }
+
+  return (
+    <div className={cn('space-y-4 text-left', className)}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
+        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full ring-1", 
+          values.length >= 5 ? "bg-amber-50 text-amber-600 ring-amber-200" : "bg-blue-50 text-blue-600 ring-blue-100"
+        )}>
+          {values.length} / 5
+        </span>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      {values.length < 5 && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handlePickFiles}
+          className={cn(
+            'group relative flex min-h-[100px] cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed transition-all duration-300',
+            isDragging 
+              ? 'border-blue-500 bg-blue-50' 
+              : 'border-slate-200 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-50'
+          )}
+        >
+          <div className="flex flex-col items-center gap-2 text-slate-400 transition-colors group-hover:text-slate-600">
+            <div className="rounded-full bg-white p-2.5 shadow-sm ring-1 ring-black/5 group-hover:shadow-md">
+              <Upload className="h-4 w-4" />
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest">点击或拖拽上传</p>
+          </div>
+        </div>
+      )}
+
+      {values.length > 0 && (
+        <div className="grid max-w-full grid-cols-[repeat(auto-fit,minmax(118px,1fr))] gap-3">
+          {values.map((src, index) => (
+            <div
+              key={index}
+              className="group relative aspect-[3/4] min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm ring-1 ring-black/5 transition hover:shadow-md"
+            >
+              <img src={src} alt={`${label}-${index}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); startCrop(index); }}
+                  className="rounded-full bg-white/90 p-1.5 text-slate-900 shadow-lg backdrop-blur-md transition hover:bg-white"
+                  title="裁剪"
+                >
+                  <Crop className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); restoreImage(index); }}
+                  disabled={!originalSourcesRef.current[index] || originalSourcesRef.current[index] === values[index]}
+                  className="rounded-full bg-white/90 p-1.5 text-slate-900 shadow-lg backdrop-blur-md transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                  title="恢复原图"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); removeImage(index); }}
+                  className="rounded-full bg-rose-500/90 p-1.5 text-white shadow-lg backdrop-blur-md transition hover:bg-rose-600"
+                  title="移除"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="absolute bottom-1.5 left-2 rounded-md bg-white/90 px-1 py-0.5 text-[9px] font-bold tabular-nums text-slate-800 backdrop-blur-md shadow-sm ring-1 ring-black/5">
+                # {index + 1}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ImageCropModal
+        open={internalCropOpen}
+        onOpenChange={setInternalCropOpen}
+        source={editSource}
+        onComplete={async (base64) => {
+          handleApplyCrop(base64)
+        }}
+        title="调整附图裁剪"
+        subtitle="Fixed 3:4 preview with zoom"
+        badge="3:4"
+        minZoom={0.6}
+        maxZoom={3.2}
+        confirmText="确认裁剪"
+        savingText="同步中..."
+      />
+    </div>
   )
 }

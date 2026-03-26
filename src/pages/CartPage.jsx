@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Check, ChevronDown, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
+import { ArrowLeft, Check, ChevronDown, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
 
 import { api } from '../lib/api'
 import { useApp } from '../lib/app-context'
@@ -39,6 +39,7 @@ function resolveApiError(error, fallback = '请稍后重试') {
 }
 
 export default function CartPage() {
+  const navigate = useNavigate()
   const { session, cartItems, cartCount, cartTotal, updateCartQuantity, clearCart, pushToast } = useApp()
   const [clearOpen, setClearOpen] = useState(false)
   const [removeOpen, setRemoveOpen] = useState(false)
@@ -206,7 +207,17 @@ export default function CartPage() {
   if (cartItems.length === 0) {
     return (
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <div className="rounded-3xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] p-10 text-center shadow-sm">
+        <div className="flex-shrink-0">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--outline-variant)]/30 bg-[var(--surface-container-lowest)] px-4 py-2 text-sm font-medium text-[var(--on-surface)] transition hover:border-[var(--primary)]/30 hover:text-[var(--primary)]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            返回上一页
+          </button>
+        </div>
+
+        <div className="rounded-3xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] p-12 text-center shadow-sm">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--surface-container)] text-[var(--on-surface)]">
             <ShoppingCart className="h-6 w-6" />
           </div>
@@ -222,6 +233,15 @@ export default function CartPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <div className="mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--outline-variant)]/30 bg-[var(--surface-container-lowest)] px-4 py-2 text-sm font-medium text-[var(--on-surface)] transition hover:border-[var(--primary)]/30 hover:text-[var(--primary)]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          返回上一页
+        </button>
+      </div>
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
         <div className="space-y-4">
           {cartItems.map((item) => (

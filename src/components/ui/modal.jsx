@@ -7,7 +7,7 @@ import { cn } from '../../lib/utils'
 const Modal = Dialog.Root
 const ModalTrigger = Dialog.Trigger
 
-const ModalContent = React.forwardRef(({ className, children, ...props }, ref) => (
+const ModalContent = React.forwardRef(({ className, children, showClose = true, ...props }, ref) => (
   <Dialog.Portal>
     <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-md" />
     <Dialog.Content
@@ -19,10 +19,12 @@ const ModalContent = React.forwardRef(({ className, children, ...props }, ref) =
       {...props}
     >
       {children}
-      <Dialog.Close className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-slate-100 backdrop-blur-xl transition hover:bg-white/20">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </Dialog.Close>
+      {showClose && (
+        <Dialog.Close className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-slate-100 backdrop-blur-xl transition hover:bg-white/20">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </Dialog.Close>
+      )}
     </Dialog.Content>
   </Dialog.Portal>
 ))

@@ -18,6 +18,7 @@ import AdminCustomerPage from './pages/admin/CustomerManagerPage'
 import AdminAccountPage from './pages/admin/AccountManagerPage'
 import AdminExportPage from './pages/admin/ExportPage'
 import WorkspaceCustomerPage from './pages/admin/CustomerManagerPage'
+import ProductEditPage from './pages/admin/product-manager/ProductEditPage'
 
 const DEFAULT_CATEGORY_OPTIONS = [
   { label: '全部分类', value: 'all' },
@@ -32,7 +33,6 @@ const STORAGE_KEYS = {
   session: 'giftcraft-session',
   cart: 'giftcraft-cart',
   cartToken: 'giftcraft-cart-token',
-  theme: 'giftcraft-theme',
 }
 
 function safeParseJSON(value, fallback) {
@@ -51,12 +51,6 @@ function loadSession() {
 function loadCart() {
   if (typeof window === 'undefined') return {}
   return safeParseJSON(window.localStorage.getItem(STORAGE_KEYS.cart), {})
-}
-
-function loadTheme() {
-  if (typeof window === 'undefined') return 'night'
-  const stored = window.localStorage.getItem(STORAGE_KEYS.theme)
-  return stored === 'sun' ? 'sun' : 'night'
 }
 
 function createCartToken() {
@@ -95,7 +89,7 @@ function AppProvider({ children }) {
   const [toasts, setToasts] = useState([])
   const [loadingAuth, setLoadingAuth] = useState(false)
   const [categoryOptions, setCategoryOptions] = useState(DEFAULT_CATEGORY_OPTIONS)
-  const [theme, setTheme] = useState(loadTheme)
+  const theme = 'sun'
 
   useEffect(() => {
     setAuthToken(session?.access_token || null)
@@ -113,12 +107,6 @@ function AppProvider({ children }) {
       window.localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(cart))
     }
   }, [cart])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(STORAGE_KEYS.theme, theme)
-    window.document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
 
   const pushToast = useCallback((type, title, detail = '') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -272,9 +260,6 @@ function AppProvider({ children }) {
         pushToast('error', '清空购物车失败', '请稍后重试')
       })
   }, [cartToken, pushToast])
-  const toggleTheme = useCallback(() => {
-    setTheme((current) => (current === 'night' ? 'sun' : 'night'))
-  }, [])
 
   const cartItems = useMemo(() => {
     return Object.entries(cart)
@@ -329,8 +314,6 @@ function AppProvider({ children }) {
       isAdmin,
       isSuperAdmin,
       theme,
-      setTheme,
-      toggleTheme,
     }),
     [
       addToCart,
@@ -344,8 +327,6 @@ function AppProvider({ children }) {
       isSuperAdmin,
       categoryOptions,
       theme,
-      setTheme,
-      toggleTheme,
       loadProducts,
       loadProductCategories,
       loadingAuth,
@@ -406,8 +387,10 @@ function AppRoutes() {
         <Route index element={<AdminDashboardPage scope="workspace" />} />
         <Route path="dashboard" element={<AdminDashboardPage scope="workspace" />} />
         <Route path="my-products" element={<AdminProductsPage scope="workspace" />} />
-        <Route path="my-orders" element={<AdminOrdersPage scope="workspace" />} />
+        <Route path="my-products/new" element={<ProductEditPage />} />
+        <Route path="my-products/edit/:id" element={<ProductEditPage />} />
         <Route path="customers" element={<WorkspaceCustomerPage scope="workspace" />} />
+        <Route path="my-orders" element={<AdminOrdersPage scope="workspace" />} />
       </Route>
 
       <Route
@@ -420,6 +403,8 @@ function AppRoutes() {
       >
         <Route index element={<AdminDashboardPage />} />
         <Route path="products" element={<AdminProductsPage />} />
+        <Route path="products/new" element={<ProductEditPage />} />
+        <Route path="products/edit/:id" element={<ProductEditPage />} />
         <Route path="customers" element={<AdminCustomerPage />} />
         <Route path="accounts" element={<AdminAccountPage />} />
         <Route path="export" element={<AdminExportPage />} />
