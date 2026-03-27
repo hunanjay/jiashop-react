@@ -6,15 +6,23 @@ import { Testimonials } from '../components/home/Testimonials';
 import { MobileNav } from '../components/home/MobileNav';
 import { Footer } from '../components/home/Footer';
 
+// Local Assets
+import heroImage from './admin/images/huaweicixi.jpeg';
+import 鼠标 from './admin/images/鼠标.jpeg';
+import 折叠键盘 from './admin/images/折叠键盘.png';
+import th from './admin/images/lihe.png';
+import ceramics from './admin/images/shubiaochongdianbao.jpeg';
+import basket from './admin/images/toumingshubiao.jpeg';
+import heroImage1 from './admin/images/wuheyituozhanwu.png';
+
 export default function HomePage() {
   const images = {
-    hero: 'https://images.unsplash.com/photo-1634283715079-d91bbed0ece0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBnaWZ0JTIwYm94JTIwc2lsayUyMHJpYmJvbnxlbnwxfHx8fDE3NzQ0MzI1NDJ8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    hero: heroImage,
     collections: {
-      main: 'https://images.unsplash.com/photo-1711548244761-ade8497ed10a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwZ29sZCUyMHN0YXRpb25lcnklMjBsZWF0aGVyJTIwYWNjZXNzb3JpZXN8ZW58MXx8fHwxNzc0NDMyNTQzfDA&ixlib=rb-4.1.0&q=80&w=1080',
-      secondary: 'https://images.unsplash.com/photo-1660038018962-b186901da9a8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwd2F0Y2glMjBib3glMjBzaWx2ZXIlMjBlbmdyYXZpbmd8ZW58MXx8fHwxNzc0NDMyNTQ0fDA&ixlib=rb-4.1.0&q=80&w=1080',
-      watch: 'https://images.unsplash.com/photo-1587789976991-e1e980e98815?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnRpc2FuYWwlMjBjZXJhbWljJTIwbXVncyUyMHBhc3RlbCUyMGNvbG9yc3xlbnwxfHx8fDE3NzQ0MzI1NDR8MA&ixlib=rb-4.1.0&q=80&w=1080',
-      ceramics: 'https://images.unsplash.com/photo-1587789976991-e1e980e98815?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnRpc2FuYWwlMjBjZXJhbWljJTIwbXVncyUyMHBhc3RlbCUyMGNvbG9yc3xlbnwxfHx8fDE3NzQ0MzI1NDR8MA&ixlib=rb-4.1.0&q=80&w=1080',
-      basket: 'https://images.unsplash.com/photo-1597757288541-e2513b697e77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBnaWZ0JTIwYmFza2V0JTIwY2hvY29sYXRlcyUyMGNoYW1wYWduZXxlbnwxfHx8fDE3NzQ0MzI1NDR8MA&ixlib=rb-4.1.0&q=80&w=1080',
+      main: 鼠标,
+      secondary: 折叠键盘,
+      watch: heroImage1,
+      basket: ceramics,
     },
     testimonials: {
       person1: 'https://images.unsplash.com/photo-1623594675959-02360202d4d6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMHBvcnRyYWl0JTIwc21pbGluZ3xlbnwxfHx8fDE3NzQ0MDA4OTh8MA&ixlib=rb-4.1.0&q=80&w=1080',
