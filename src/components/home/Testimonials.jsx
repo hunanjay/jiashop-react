@@ -3,22 +3,19 @@ import { Star } from 'lucide-react';
 export function Testimonials({ testimonialImages = {} }) {
   const testimonials = [
     {
-      name: 'Sarah Jenkins',
-      role: '结婚纪念礼品',
-      text: '"定制皮革手记的细节程度令人惊叹。这感觉就像是在赠送一件艺术品,而不仅仅是一份礼物。"',
+      name: '中国电信',
+      text: '"充电宝彩印的细节程度令人惊叹。这感觉就像是在赠送一件艺术品,而不仅仅是一份礼物。"',
       image: testimonialImages.person1,
       offset: '',
     },
     {
-      name: 'Marcus Thorne',
-      role: 'Bloom Tech 总监',
+      name: '清华大学',
       text: '"我们的企业订单处理得非常精准。定制刻制完美匹配了我们品牌的奢华美学。"',
       image: testimonialImages.person2,
       offset: 'md:translate-y-8',
     },
     {
-      name: 'Elena Rodriguez',
-      role: '已认证买家',
+      name: '中信银行',
       text: '"作为定制产品,物流速度出奇地快。包装本身就非常精美,甚至不需要额外的礼品纸。"',
       image: testimonialImages.person3,
       offset: '',

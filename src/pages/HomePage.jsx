@@ -4,7 +4,6 @@ import { FeaturedCollections } from '../components/home/FeaturedCollections';
 import { CustomizerCTA } from '../components/home/CustomizerCTA';
 import { Testimonials } from '../components/home/Testimonials';
 import { MobileNav } from '../components/home/MobileNav';
-import { Footer } from '../components/home/Footer';
 
 // Local Assets
 import heroImage from './admin/images/huaweicixi.jpeg';
@@ -25,9 +24,9 @@ export default function HomePage() {
       basket: ceramics,
     },
     testimonials: {
-      person1: 'https://images.unsplash.com/photo-1623594675959-02360202d4d6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMHBvcnRyYWl0JTIwc21pbGluZ3xlbnwxfHx8fDE3NzQ0MDA4OTh8MA&ixlib=rb-4.1.0&q=80&w=1080',
-      person2: 'https://images.unsplash.com/photo-1544799048-555232c964cd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzc21hbiUyMG5hdnklMjBzdWl0JTIwcG9ydHJhaXR8ZW58MXx8fHwxNzc0NDMyNTQ1fDA&ixlib=rb-4.1.0&q=80&w=1080',
-      person3: 'https://images.unsplash.com/photo-1658437902644-e5414badf0f2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b21hbiUyMGN1cmx5JTIwaGFpciUyMGdsYXNzZXMlMjBzbWlsaW5nfGVufDF8fHx8MTc3NDQzMjU0Nnww&ixlib=rb-4.1.0&q=80&w=1080',
+      person1: 'https://www.chinatelecom.com.cn/ct/image/img/favicon.ico',
+      person2: 'https://upload.wikimedia.org/wikipedia/commons/e/ec/Tsinghua_University_Logo.svg',
+      person3: 'https://s1.aigei.com/src/img/png/c6/c644b94f9d1b4b69b5f3d4500452caf0.png?imageMogr2/auto-orient/thumbnail/!282x282r/gravity/Center/crop/282x282/quality/85/%7CimageView2/2/w/282&e=2051020800&token=P7S2Xpzfz11vAkASLTkfHN7Fw-oOZBecqeJaxypL:Ou4nF3r6kP_VSoZbjxJ5ecsjq-g=',
     },
   };
 
@@ -41,7 +40,6 @@ export default function HomePage() {
         <Testimonials testimonialImages={images.testimonials} />
       </main>
       <MobileNav />
-      <Footer />
     </div>
   );
 }

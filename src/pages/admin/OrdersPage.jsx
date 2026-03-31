@@ -14,7 +14,18 @@ import { FileUploadField } from '../../components/ui/file-upload'
 import { formatCurrency, formatDateTime } from '../../lib/format'
 import { searchProducts } from '../../lib/product-search'
 
-const STATUS_OPTIONS = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled']
+const STATUS_OPTIONS = [
+  { value: 'Pending', label: '待处理' },
+  { value: 'Processing', label: '处理中' },
+  { value: 'Shipped', label: '已发货' },
+  { value: 'Completed', label: '已完成' },
+  { value: 'Cancelled', label: '已取消' },
+]
+
+const STATUS_LABELS = STATUS_OPTIONS.reduce((acc, item) => {
+  acc[item.value] = item.label
+  return acc
+}, {})
 
 const EMPTY_FORM = {
   id: null,
@@ -39,6 +50,10 @@ function resolveApiError(error, fallback = '请稍后重试') {
   }
   if (typeof error?.message === 'string' && error.message.trim()) return error.message.trim()
   return fallback
+}
+
+function getStatusLabel(status) {
+  return STATUS_LABELS[status] || status || '未知状态'
 }
 
 export default function OrdersPage({ scope = 'admin' }) {
@@ -118,7 +133,7 @@ export default function OrdersPage({ scope = 'admin' }) {
 
   const filteredOrders = useMemo(() => {
     return visibleOrders.filter((order) => {
-      const text = `${order.id} ${order.customer_name} ${order.status}`.toLowerCase()
+      const text = `${order.id} ${order.customer_name} ${order.status} ${getStatusLabel(order.status)}`.toLowerCase()
       return text.includes(search.toLowerCase())
     })
   }, [visibleOrders, search])
@@ -403,8 +418,8 @@ export default function OrdersPage({ scope = 'admin' }) {
                         title="选择新状态可直接更新"
                       >
                         {STATUS_OPTIONS.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
+                          <option key={status.value} value={status.value}>
+                            {status.label}
                           </option>
                         ))}
                       </select>
@@ -548,8 +563,8 @@ export default function OrdersPage({ scope = 'admin' }) {
                           className="h-11 w-full rounded-2xl border border-white/10 bg-white/6 px-4 text-sm text-white backdrop-blur-xl"
                         >
                           {STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
+                            <option key={status.value} value={status.value}>
+                              {status.label}
                             </option>
                           ))}
                         </select>
@@ -715,7 +730,7 @@ export default function OrdersPage({ scope = 'admin' }) {
         title="确认保存订单"
         description={
           selectedId
-            ? `你正在修改订单「${selectedId || ''}」的状态为 ${form.status}，确认后会立即生效。`
+            ? `你正在修改订单「${selectedId || ''}」的状态为 ${getStatusLabel(form.status)}，确认后会立即生效。`
             : `你正在创建客户「${form.customer_name || '未命名客户'}」的订单，确认后会立即提交。`
         }
         confirmLabel="确认提交"
@@ -775,10 +790,10 @@ export default function OrdersPage({ scope = 'admin' }) {
                     <div className="text-xs text-zinc-500">客户</div>
                     <div className="mt-1 font-medium text-white">{detailOrder.customer_name}</div>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="text-xs text-zinc-500">状态</div>
-                    <div className="mt-1 font-medium text-white">{detailOrder.status}</div>
-                  </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs text-zinc-500">状态</div>
+                    <div className="mt-1 font-medium text-white">{getStatusLabel(detailOrder.status)}</div>
+                </div>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-xs text-zinc-500">备注</div>

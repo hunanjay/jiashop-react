@@ -20,10 +20,6 @@ export function Hero({ heroImage }) {
             <Link to="/catalog" className="px-8 py-4 bg-[var(--primary)] text-[var(--on-primary)] rounded-2xl font-semibold shadow-lg shadow-blue-500/20 hover:bg-[var(--primary-dim)] transition-all">
               立即开始定制
             </Link>
-            <button className="flex items-center gap-2 text-[var(--on-surface)] font-semibold group">
-              浏览精选系列
-              <ArrowRight className="group-hover:translate-x-1 transition-transform w-5 h-5" />
-            </button>
           </div>
         </div>
         <div className="flex-1 relative">
@@ -33,15 +29,6 @@ export function Hero({ heroImage }) {
               className="w-full h-full object-cover"
               src={heroImage}
             />
-          </div>
-          <div className="absolute -bottom-8 -left-8 glass-panel bg-white/70 p-6 rounded-2xl shadow-xl border border-white/20 max-w-xs transition-all hover:scale-105">
-            <div className="flex gap-2 items-center mb-2">
-              <Star className="text-[var(--tertiary)] w-5 h-5 fill-current" />
-              <span className="text-sm font-bold text-[var(--on-surface)]">匠人品质</span>
-            </div>
-            <p className="text-xs text-[var(--on-surface-variant)]">
-              每一件礼品均在我们的工作室由手工润色，采用可持续来源的顶级材质。
-            </p>
           </div>
         </div>
       </div>

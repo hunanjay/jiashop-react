@@ -164,10 +164,10 @@ function AppProvider({ children }) {
     syncCartFromApi()
   }, [syncCartFromApi])
 
-  const login = useCallback(async (username, password) => {
+  const login = useCallback(async (identifier, password) => {
     setLoadingAuth(true)
     try {
-      const response = await api.post('/auth/login', { username, password })
+      const response = await api.post('/auth/login', { identifier, password })
       const nextSession = {
         access_token: response.data.access_token,
         refresh_token: response.data.refresh_token,

@@ -9,7 +9,7 @@ import { Input } from '../components/ui/input'
 
 export default function LoginPage() {
   const { login, loadingAuth } = useApp()
-  const [username, setUsername] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
@@ -17,12 +17,18 @@ export default function LoginPage() {
   const handleSubmit = async (event) => {
     event.preventDefault()
 
-    const session = await login(username, password)
+    const session = await login(identifier, password)
     const destination =
       location.state?.from?.pathname ||
       (session.role === 'user' ? '/workspace' : session.role === 'guest' ? '/' : '/admin')
     navigate(destination, { replace: true })
   }
+
+  const loginHighlights = [
+    ['品牌体验', '统一的视觉语言让登录和后台保持一致'],
+    ['高效操作', '面向日常管理优化的简洁入口'],
+    ['安全访问', '所有账号通过同一登录入口进入系统'],
+  ]
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.98),_rgba(244,247,250,1)_40%,_rgba(232,236,243,1)_100%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
@@ -45,11 +51,7 @@ export default function LoginPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                ['客户侧', '沉浸、极简、转化导向'],
-                ['管理侧', '紧凑、功能性、快速操作'],
-                ['权限隔离', 'guest / user / admin / superadmin'],
-              ].map(([title, desc]) => (
+              {loginHighlights.map(([title, desc]) => (
                 <div key={title} className="rounded-3xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur-xl">
                   <div className="text-sm font-semibold text-slate-900">{title}</div>
                   <div className="mt-1 text-sm text-slate-500">{desc}</div>
@@ -64,13 +66,18 @@ export default function LoginPage() {
             <CardHeader className="p-0">
               <div className="text-sm font-semibold tracking-[0.22em] text-slate-500 uppercase">登录面板</div>
               <CardTitle className="mt-2 text-2xl">进入后台</CardTitle>
-              <CardDescription>默认账号：admin / admin123</CardDescription>
+              <CardDescription>请输入邮箱或手机号码登录系统。</CardDescription>
             </CardHeader>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-700">用户名</span>
-                <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" />
+                <span className="text-sm font-medium text-slate-700">邮箱 / 手机号码</span>
+                <Input
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="name@example.com / 13800000000"
+                  autoComplete="off"
+                />
               </label>
 
               <label className="block space-y-2">

@@ -7,6 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge'
 import { formatCurrency } from '../../lib/format'
 
+const ORDER_STATUS_LABELS = {
+  Pending: '待处理',
+  Processing: '处理中',
+  Shipped: '已发货',
+  Completed: '已完成',
+  Cancelled: '已取消',
+}
+
 export default function DashboardPage({ scope = 'admin' }) {
   const { products, session, isSuperAdmin, pushToast } = useApp()
   const isWorkspace = scope === 'workspace'
@@ -15,7 +23,6 @@ export default function DashboardPage({ scope = 'admin' }) {
   const [customers, setCustomers] = useState([])
   const [users, setUsers] = useState([])
   const [stats, setStats] = useState(null)
-  const [reportView, setReportView] = useState('weekly')
 
   useEffect(() => {
     let mounted = true
@@ -42,95 +49,100 @@ export default function DashboardPage({ scope = 'admin' }) {
     }
   }, [isSuperAdmin, isWorkspace, pushToast])
 
-  const fallbackDailyTrend = useMemo(() => {
+  const visibleOrders = orders
+
+  const rollingDailyTrend = useMemo(() => {
     const now = new Date()
     const dayMap = new Map()
+
     for (let index = 6; index >= 0; index -= 1) {
       const day = new Date(now)
       day.setDate(now.getDate() - index)
       const key = day.toISOString().slice(0, 10)
       dayMap.set(key, {
-        label: `${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`,
+        label: formatTrendDayLabel(day, now),
         orders: 0,
         sales_total: 0,
       })
     }
-    orders.forEach((order) => {
+
+    visibleOrders.forEach((order) => {
       const key = (order.created_at || '').slice(0, 10)
       const bucket = dayMap.get(key)
       if (!bucket) return
       bucket.orders += 1
       bucket.sales_total += Number(order.total_price || 0)
     })
-    return Array.from(dayMap.values())
-  }, [orders])
 
-  const fallbackWeeklySummary = useMemo(() => {
+    return Array.from(dayMap.values())
+  }, [visibleOrders])
+
+  const monthlySalesTrend = useMemo(() => {
     const now = new Date()
-    const summaries = Array.from({ length: 4 }).map((_, index) => ({
-      label: `W${index + 1}`,
-      orders: 0,
-      sales_total: 0,
-    }))
-    orders.forEach((order) => {
+    const monthIndex = now.getMonth()
+    const year = now.getFullYear()
+    const daysInMonth = now.getDate()
+
+    const buckets = Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1
+      return {
+        day,
+        label: `${day}日`,
+        sales_total: 0,
+      }
+    })
+
+    visibleOrders.forEach((order) => {
       if (!order.created_at) return
       const createdAt = new Date(order.created_at)
-      const ageDays = Math.floor((now.getTime() - createdAt.getTime()) / (24 * 60 * 60 * 1000))
-      if (Number.isNaN(ageDays) || ageDays < 0 || ageDays >= 28) return
-      const bucketIndex = 3 - Math.floor(ageDays / 7)
-      const bucket = summaries[Math.max(0, Math.min(3, bucketIndex))]
-      bucket.orders += 1
+      if (createdAt.getFullYear() !== year || createdAt.getMonth() !== monthIndex) return
+      const bucket = buckets[createdAt.getDate() - 1]
+      if (!bucket) return
       bucket.sales_total += Number(order.total_price || 0)
     })
-    return summaries
-  }, [orders])
 
-  const fallbackMonthlySummary = useMemo(() => {
-    const now = new Date()
-    const monthOrders = orders.filter((order) => {
-      if (!order.created_at) return false
-      const createdAt = new Date(order.created_at)
-      return createdAt.getFullYear() === now.getFullYear() && createdAt.getMonth() === now.getMonth()
-    })
-    return {
-      orders: monthOrders.length,
-      sales_total: monthOrders.reduce((sum, order) => sum + Number(order.total_price || 0), 0),
-    }
-  }, [orders])
+    return buckets
+  }, [visibleOrders])
 
-  const fallbackCustomerSummary = useMemo(() => {
-    const recent = [...customers]
-      .sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || '')))
-      .slice(0, 5)
-    return {
-      recent,
-      owner_distribution: [{ username: session?.username || 'Me', count: customers.length }],
-    }
-  }, [customers, session?.username])
+  const monthlySalesPeak = useMemo(
+    () => Math.max(1, ...monthlySalesTrend.map((item) => Number(item.sales_total || 0))),
+    [monthlySalesTrend],
+  )
+
+  const monthlySalesTotal = useMemo(
+    () => monthlySalesTrend.reduce((sum, item) => sum + Number(item.sales_total || 0), 0),
+    [monthlySalesTrend],
+  )
 
   const overviewCards = useMemo(
     () => [
       { label: '商品总数', value: isWorkspace ? workspaceProducts.length : products.length, icon: Package },
-      { label: '订单数', value: stats?.orders ?? orders.length, icon: ReceiptText },
+      { label: '订单数', value: stats?.orders ?? visibleOrders.length, icon: ReceiptText },
       { label: '客户数', value: stats?.customers ?? customers.length, icon: Users },
-      { label: '总销售额', value: formatCurrency(stats?.sales_total ?? orders.reduce((sum, item) => sum + Number(item.total_price || 0), 0)), icon: ShieldCheck },
+      { label: '总销售额', value: formatCurrency(stats?.sales_total ?? visibleOrders.reduce((sum, item) => sum + Number(item.total_price || 0), 0)), icon: ShieldCheck },
     ],
-    [customers.length, isWorkspace, orders, products.length, stats, workspaceProducts.length],
+    [customers.length, isWorkspace, products.length, stats, visibleOrders, workspaceProducts.length],
   )
 
   const statusBreakdown = stats?.status_distribution?.length
     ? stats.status_distribution
     : [
-        { status: 'Processing', count: orders.filter((order) => order.status === 'Processing').length },
-        { status: 'Pending', count: orders.filter((order) => order.status === 'Pending').length },
-        { status: 'Completed', count: orders.filter((order) => order.status === 'Completed').length },
+        { status: 'Processing', count: visibleOrders.filter((order) => order.status === 'Processing').length },
+        { status: 'Pending', count: visibleOrders.filter((order) => order.status === 'Pending').length },
+        { status: 'Completed', count: visibleOrders.filter((order) => order.status === 'Completed').length },
       ]
 
-  const ranking = stats?.sales_ranking || (isWorkspace ? [{ username: session?.username || 'Me', sales_total: orders.reduce((sum, item) => sum + Number(item.total_price || 0), 0), order_count: orders.length }] : [])
-  const dailyTrend = stats?.daily_trend || fallbackDailyTrend
-  const weeklySummary = stats?.weekly_summary || fallbackWeeklySummary
-  const monthlySummary = stats?.monthly_summary || fallbackMonthlySummary
-  const customerSummary = stats?.customer_summary || fallbackCustomerSummary
+  const ranking =
+    stats?.sales_ranking ||
+    (isWorkspace
+      ? [{ username: session?.username || 'Me', sales_total: visibleOrders.reduce((sum, item) => sum + Number(item.total_price || 0), 0), order_count: visibleOrders.length }]
+      : [])
+
+  const customerSummary =
+    stats?.customer_summary || {
+      owner_distribution: [{ username: session?.username || 'Me', count: customers.length }],
+    }
+
   const ownerNameById = (ownerId) => users.find((user) => user.id === ownerId)?.username || session?.username || ownerId || '未归属'
 
   return (
@@ -165,7 +177,7 @@ export default function DashboardPage({ scope = 'admin' }) {
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-2">
             {statusBreakdown.map((item) => (
-              <PanelItem key={item.status} label={item.status} value={item.count} />
+              <PanelItem key={item.status} label={getOrderStatusLabel(item.status)} value={item.count} />
             ))}
           </CardContent>
         </Card>
@@ -192,16 +204,15 @@ export default function DashboardPage({ scope = 'admin' }) {
             )}
           </CardContent>
         </Card>
+
         <Card className="border-white/10 bg-white/6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
-            <CardTitle className="text-base">最近 7 天趋势</CardTitle>
-            <Badge variant="secondary">订单与销售额</Badge>
+            <CardTitle className="text-base">动态近 7 天趋势</CardTitle>
+            <Badge variant="secondary">滚动日期</Badge>
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-2">
-            {dailyTrend.length ? (
-              dailyTrend.slice(0, 5).map((item) => (
-                <TrendBar key={item.label} label={item.label} value={item.orders} sales={item.sales_total} />
-              ))
+            {rollingDailyTrend.length ? (
+              rollingDailyTrend.map((item) => <TrendBar key={item.label} label={item.label} value={item.orders} sales={item.sales_total} />)
             ) : (
               <div className="text-sm text-zinc-500">暂无趋势数据</div>
             )}
@@ -210,72 +221,11 @@ export default function DashboardPage({ scope = 'admin' }) {
 
         <Card className="border-white/10 bg-white/6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
-            <CardTitle className="text-base">周报 / 月报</CardTitle>
-            <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1">
-              <button
-                type="button"
-                onClick={() => setReportView('weekly')}
-                className={`rounded-full px-3 py-1 text-xs transition ${
-                  reportView === 'weekly' ? 'bg-white/20 text-white' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                周报
-              </button>
-              <button
-                type="button"
-                onClick={() => setReportView('monthly')}
-                className={`rounded-full px-3 py-1 text-xs transition ${
-                  reportView === 'monthly' ? 'bg-white/20 text-white' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                月报
-              </button>
-            </div>
+            <CardTitle className="text-base">本月销量折线图</CardTitle>
+            <Badge variant="secondary">金额</Badge>
           </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-2">
-            {reportView === 'weekly' ? (
-              <div className="space-y-2">
-                {weeklySummary.length ? (
-                  weeklySummary.slice(0, 3).map((item) => (
-                    <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
-                      <div>
-                        <div className="font-medium text-white">{item.label}</div>
-                        <div className="text-xs text-zinc-500">{item.orders} 单</div>
-                      </div>
-                      <div className="text-xs font-semibold text-white">{formatCurrency(item.sales_total)}</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-sm text-zinc-500">暂无周报数据</div>
-                )}
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">月报汇总</div>
-                <div className="mt-1.5 text-xl font-semibold text-white">{monthlySummary.orders} 单</div>
-                <div className="mt-0.5 text-xs text-zinc-400">{formatCurrency(monthlySummary.sales_total)}</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="border-white/10 bg-white/6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-base">客户汇总</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 p-4 pt-2">
-            {customerSummary.recent.length ? (
-              customerSummary.recent.slice(0, 4).map((customer) => (
-                <div key={customer.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
-                  <div>
-                    <div className="font-medium text-white">{customer.company_name}</div>
-                    <div className="text-xs text-zinc-500">{customer.purchaser || '未填写采购员'}</div>
-                  </div>
-                  <div className="text-xs text-zinc-500">{ownerNameById(customer.owner_id)}</div>
-                </div>
-              ))
-            ) : (
-              <div className="text-sm text-zinc-500">暂无客户数据</div>
-            )}
+          <CardContent className="p-4 pt-2">
+            <MonthlySalesChart points={monthlySalesTrend} peak={monthlySalesPeak} total={monthlySalesTotal} />
           </CardContent>
         </Card>
 
@@ -285,9 +235,7 @@ export default function DashboardPage({ scope = 'admin' }) {
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-2">
             {customerSummary.owner_distribution.length ? (
-              customerSummary.owner_distribution.map((item) => (
-                <PanelItem key={item.username} label={item.username} value={item.count} />
-              ))
+              customerSummary.owner_distribution.map((item) => <PanelItem key={item.username} label={item.username} value={item.count} />)
             ) : (
               <div className="text-sm text-zinc-500">暂无归属数据</div>
             )}
@@ -314,11 +262,112 @@ function TrendBar({ label, value, sales }) {
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium text-zinc-300">{label}</span>
-        <span className="text-zinc-500">{value} 单 · {formatCurrency(sales)}</span>
+        <span className="text-zinc-500">
+          {value} 单 · {formatCurrency(sales)}
+        </span>
       </div>
       <div className="h-2 rounded-full bg-white/10">
         <div className="h-2 rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400 transition-all" style={{ width: `${width}%` }} />
       </div>
     </div>
   )
+}
+
+function MonthlySalesChart({ points, peak, total }) {
+  const width = 640
+  const height = 240
+  const padding = 28
+  const chartWidth = width - padding * 2
+  const chartHeight = height - padding * 2
+  const maxValue = Math.max(Number(peak || 0), 1)
+  const xStep = points.length > 1 ? chartWidth / (points.length - 1) : chartWidth
+
+  const scaledPoints = points.map((point, index) => {
+    const x = padding + index * xStep
+    const y = padding + chartHeight - (Number(point.sales_total || 0) / maxValue) * chartHeight
+    return { ...point, x, y }
+  })
+
+  const linePoints = scaledPoints.map((point) => `${point.x},${point.y}`).join(' ')
+  const areaPoints = [`${padding},${padding + chartHeight}`, ...scaledPoints.map((point) => `${point.x},${point.y}`), `${padding + chartWidth},${padding + chartHeight}`].join(' ')
+  const yTicks = [0, 0.25, 0.5, 0.75, 1]
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">本月累计销售额</div>
+          <div className="mt-1 text-xl font-semibold text-white">{formatCurrency(total)}</div>
+        </div>
+        <div className="text-xs text-zinc-500">横坐标：本月日期</div>
+      </div>
+
+      <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5 p-3">
+        <svg viewBox={`0 0 ${width} ${height}`} className="h-[240px] w-full">
+          <defs>
+            <linearGradient id="salesGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#6366f1" />
+              <stop offset="55%" stopColor="#8b5cf6" />
+              <stop offset="100%" stopColor="#38bdf8" />
+            </linearGradient>
+            <linearGradient id="salesFill" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="rgba(99,102,241,0.35)" />
+              <stop offset="100%" stopColor="rgba(56,189,248,0.02)" />
+            </linearGradient>
+          </defs>
+
+          {yTicks.map((ratio) => {
+            const y = padding + chartHeight - chartHeight * ratio
+            const value = maxValue * ratio
+            return (
+              <g key={ratio}>
+                <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 6" />
+                <text x={8} y={y + 4} fill="rgba(161,161,170,0.8)" fontSize="10">
+                  {formatCurrency(value)}
+                </text>
+              </g>
+            )
+          })}
+
+          {linePoints ? <polygon points={areaPoints} fill="url(#salesFill)" /> : null}
+
+          {linePoints ? (
+            <polyline
+              fill="none"
+              stroke="url(#salesGradient)"
+              strokeWidth="3"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              points={linePoints}
+            />
+          ) : null}
+
+          {scaledPoints.map((point, index) => {
+            const showLabel = index === 0 || index === scaledPoints.length - 1 || (index + 1) % 5 === 0
+            return (
+              <g key={point.label}>
+                <circle cx={point.x} cy={point.y} r="4.5" fill="url(#salesGradient)" />
+                {showLabel ? (
+                  <text x={point.x} y={height - 8} textAnchor="middle" fill="rgba(161,161,170,0.85)" fontSize="10">
+                    {point.label}
+                  </text>
+                ) : null}
+              </g>
+            )
+          })}
+        </svg>
+      </div>
+    </div>
+  )
+}
+
+function getOrderStatusLabel(status) {
+  return ORDER_STATUS_LABELS[status] || status || '未知状态'
+}
+
+function formatTrendDayLabel(day, now) {
+  const diffDays = Math.round((now.getTime() - day.getTime()) / (24 * 60 * 60 * 1000))
+  if (diffDays === 0) return '今天'
+  if (diffDays === 1) return '昨天'
+  return `${String(day.getMonth() + 1).padStart(2, '0')}/${String(day.getDate()).padStart(2, '0')}`
 }

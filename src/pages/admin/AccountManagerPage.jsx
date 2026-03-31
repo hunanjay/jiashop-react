@@ -20,6 +20,19 @@ const EMPTY_FORM = {
   role: 'user',
 }
 
+function generateTemporaryPassword() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+  const length = 10
+
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(length)
+    window.crypto.getRandomValues(bytes)
+    return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('')
+  }
+
+  return Math.random().toString(36).slice(2, 2 + length)
+}
+
 export default function AccountManagerPage() {
   const { pushToast, isSuperAdmin } = useApp()
   const [users, setUsers] = useState([])
@@ -35,6 +48,7 @@ export default function AccountManagerPage() {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
   const [pendingUser, setPendingUser] = useState(null)
   const [pendingPayload, setPendingPayload] = useState(null)
+  const [pendingTempPassword, setPendingTempPassword] = useState('')
 
   const roleOptions = useMemo(() => roles.map((role) => ({ label: role.name, value: role.name })), [roles])
 
@@ -130,17 +144,19 @@ export default function AccountManagerPage() {
 
   const requestResetPassword = (user) => {
     setPendingUser(user)
+    setPendingTempPassword(generateTemporaryPassword())
     setResetConfirmOpen(true)
   }
 
   const resetPassword = async () => {
-    if (!pendingUser) return
+    if (!pendingUser || !pendingTempPassword) return
     setSaving(true)
     try {
-      await api.patch(`/admin/users/${pendingUser.id}/password`, { password: 'ChangeMe123!' })
-      pushToast('success', '密码已重置为 ChangeMe123!')
+      await api.patch(`/admin/users/${pendingUser.id}/password`, { password: pendingTempPassword })
+      pushToast('success', '密码已重置')
       setResetConfirmOpen(false)
       setPendingUser(null)
+      setPendingTempPassword('')
     } catch {
       pushToast('error', '重置失败')
     } finally {
@@ -310,13 +326,16 @@ export default function AccountManagerPage() {
       <ConfirmDialog
         open={resetConfirmOpen}
         title="确认重置密码"
-        description={`将「${pendingUser?.username || ''}」的密码重置为 ChangeMe123!，确认后可立即登录。`}
+        description={`将「${pendingUser?.username || ''}」的密码重置为临时密码：${pendingTempPassword || '******'}。确认后可立即登录。`}
         confirmLabel={saving ? '重置中...' : '确认重置'}
         cancelLabel="取消"
         loading={saving}
         onOpenChange={(open) => {
           setResetConfirmOpen(open)
-          if (!open) setPendingUser(null)
+          if (!open) {
+            setPendingUser(null)
+            setPendingTempPassword('')
+          }
         }}
         onConfirm={resetPassword}
       />

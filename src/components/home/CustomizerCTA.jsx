@@ -18,11 +18,11 @@ export function CustomizerCTA() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-4 text-white/90">
                 <Pencil className="text-[var(--tertiary-fixed)] w-6 h-6" />
-                <span>实时刻制预览</span>
+                <span>在线刻制预览</span>
               </div>
               <div className="flex items-center gap-4 text-white/90">
                 <Palette className="text-[var(--tertiary-fixed)] w-6 h-6" />
-                <span>精选材质筛选</span>
+                <span>样品极速发货</span>
               </div>
               <div className="flex items-center gap-4 text-white/90">
                 <PenTool className="text-[var(--tertiary-fixed)] w-6 h-6" />
