@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, Sparkles } from 'lucide-react'
 
@@ -8,11 +8,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Input } from '../components/ui/input'
 
 export default function LoginPage() {
-  const { login, loadingAuth } = useApp()
+  const { login, loadingAuth, session } = useApp()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
+
+  useEffect(() => {
+    if (!session) return
+    const destination = session.role === 'user' ? '/workspace' : session.role === 'guest' ? '/' : '/admin'
+    navigate(location.state?.from?.pathname || destination, { replace: true })
+  }, [location.state?.from?.pathname, navigate, session])
 
   const handleSubmit = async (event) => {
     event.preventDefault()

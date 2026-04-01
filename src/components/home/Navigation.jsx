@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom'
 import { useApp } from '../../lib/app-context'
 
 export function Navigation() {
-  const { cartCount } = useApp()
+  const { cartCount, session } = useApp()
+  const accountHref = session ? (session.role === 'user' ? '/workspace' : '/admin') : '/login'
+  const accountLabel = session ? '个人中心' : '登录'
 
   return (
     <nav className="fixed top-0 z-50 w-full bg-white/70 px-8 py-4 shadow-[0_20px_40px_rgba(0,0,0,0.06)] backdrop-blur-xl">
@@ -31,8 +33,8 @@ export function Navigation() {
           <Link to="/catalog" className="px-6 py-2.5 bg-[var(--primary)] text-[var(--on-primary)] rounded-xl font-medium text-sm transition-transform active:scale-95 duration-200">
             开始定制
           </Link>
-          <Link to="/login" className="hidden sm:block text-slate-500 font-medium hover:text-blue-500 transition-all text-sm">
-            登录
+          <Link to={accountHref} className="hidden sm:block text-slate-500 font-medium hover:text-blue-500 transition-all text-sm">
+            {accountLabel}
           </Link>
         </div>
       </div>
