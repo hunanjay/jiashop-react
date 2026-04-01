@@ -5,7 +5,7 @@ import { useApp } from '../../lib/app-context'
 import { api } from '../../lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
-import { formatCurrency } from '../../lib/format'
+import { formatCurrency, parseApiDateTime } from '../../lib/format'
 
 const ORDER_STATUS_LABELS = {
   Pending: '待处理',
@@ -58,7 +58,7 @@ export default function DashboardPage({ scope = 'admin' }) {
     for (let index = 6; index >= 0; index -= 1) {
       const day = new Date(now)
       day.setDate(now.getDate() - index)
-      const key = day.toISOString().slice(0, 10)
+      const key = toLocalDateKey(day)
       dayMap.set(key, {
         label: formatTrendDayLabel(day, now),
         orders: 0,
@@ -67,7 +67,9 @@ export default function DashboardPage({ scope = 'admin' }) {
     }
 
     visibleOrders.forEach((order) => {
-      const key = (order.created_at || '').slice(0, 10)
+      const createdAt = parseApiDateTime(order.created_at)
+      if (!createdAt || Number.isNaN(createdAt.getTime())) return
+      const key = toLocalDateKey(createdAt)
       const bucket = dayMap.get(key)
       if (!bucket) return
       bucket.orders += 1
@@ -93,8 +95,8 @@ export default function DashboardPage({ scope = 'admin' }) {
     })
 
     visibleOrders.forEach((order) => {
-      if (!order.created_at) return
-      const createdAt = new Date(order.created_at)
+      const createdAt = parseApiDateTime(order.created_at)
+      if (!createdAt || Number.isNaN(createdAt.getTime())) return
       if (createdAt.getFullYear() !== year || createdAt.getMonth() !== monthIndex) return
       const bucket = buckets[createdAt.getDate() - 1]
       if (!bucket) return
@@ -370,4 +372,8 @@ function formatTrendDayLabel(day, now) {
   if (diffDays === 0) return '今天'
   if (diffDays === 1) return '昨天'
   return `${String(day.getMonth() + 1).padStart(2, '0')}/${String(day.getDate()).padStart(2, '0')}`
+}
+
+function toLocalDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
