@@ -16,24 +16,36 @@ export default function ProductFormModal({
   onSave,
 }) {
   const updateGalleryImage = (index, val) => {
-    const next = [...(form.images || [])]
-    if (val === null) {
-      next.splice(index, 1)
-    } else {
-      next[index] = val
-    }
-    setForm((c) => ({ ...c, images: next }))
+    setForm((current) => {
+      const next = [...(current.images || [])]
+      if (val === null) {
+        next.splice(index, 1)
+      } else {
+        next[index] = val
+      }
+      return { ...current, images: next }
+    })
+  }
+
+  const addGalleryImage = (val) => {
+    setForm((current) => {
+      const next = [...(current.images || [])]
+      if (next.length >= 5) return current
+      return { ...current, images: [...next, val] }
+    })
   }
 
   const moveGalleryImage = (e, index, direction) => {
     e.stopPropagation()
-    const next = [...(form.images || [])]
-    const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= next.length) return
-    const temp = next[index]
-    next[index] = next[targetIndex]
-    next[targetIndex] = temp
-    setForm((c) => ({ ...c, images: next }))
+    setForm((current) => {
+      const next = [...(current.images || [])]
+      const targetIndex = index + direction
+      if (targetIndex < 0 || targetIndex >= next.length) return current
+      const temp = next[index]
+      next[index] = next[targetIndex]
+      next[targetIndex] = temp
+      return { ...current, images: next }
+    })
   }
 
   return (

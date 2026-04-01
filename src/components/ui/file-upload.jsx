@@ -3,6 +3,8 @@ import { Crop, Edit, RotateCcw, Upload, X } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
 import { ImageCropModal } from './ImageCropModal'
+import { useApp } from '../../lib/app-context'
+import { extractClipboardImage } from '../../lib/clipboard-image'
 
 export const CARD_IMAGE_ASPECT = '3 / 4'
 
@@ -18,9 +20,11 @@ export function FileUploadField({
   aspectRatio = 1,
   outputWidth = 800,
   outputHeight = 800,
+  enablePaste = true,
   className,
 }) {
   const inputRef = useRef(null)
+  const { pushToast } = useApp()
   const [cropOpen, setCropOpen] = useState(false)
   const [pendingSource, setPendingSource] = useState('')
   const [pendingName, setPendingName] = useState('')
@@ -51,6 +55,20 @@ export function FileUploadField({
       setCropOpen(true)
     }
     reader.readAsDataURL(file)
+  }
+
+  const handlePaste = async (event) => {
+    if (!enablePaste) return
+    const pastedImage = await extractClipboardImage(event)
+    if (!pastedImage) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    originalSourceRef.current = pastedImage
+    setPendingSource(pastedImage)
+    setPendingName('剪贴板图片')
+    setCropOpen(true)
+    pushToast('info', '已识别剪贴板图片', '可以直接裁剪并保存')
   }
 
   const handleClear = () => {
@@ -102,7 +120,11 @@ export function FileUploadField({
 
   return (
     <>
-      <div className={cn('overflow-hidden rounded-3xl border border-black/5 bg-slate-50/50 shadow-inner transition-all', className)}>
+      <div
+        className={cn('overflow-hidden rounded-3xl border border-black/5 bg-slate-50/50 shadow-inner transition-all outline-none', className)}
+        tabIndex={0}
+        onPaste={handlePaste}
+      >
         {hasPreview ? (
           <div className="relative w-full overflow-hidden bg-slate-200" style={{ aspectRatio }}>
             <img src={value} alt={label} className="h-full w-full object-cover" />
@@ -147,6 +169,9 @@ export function FileUploadField({
               <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
               {aspectRatio === 1 ? '主图规格 800×800' : '主图规格 3:4'}
             </div>
+            <div className="absolute bottom-3 right-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold text-slate-600 backdrop-blur-md ring-1 ring-black/5 shadow-sm">
+              点击后可直接 Ctrl+V 粘贴
+            </div>
           </div>
         ) : (
           <button
@@ -160,7 +185,7 @@ export function FileUploadField({
             </div>
             <div className="text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest">{label}</p>
-              <p className="mt-1 text-[9px] opacity-60">点击上传封面</p>
+              {enablePaste && <p className="mt-1 text-[9px] opacity-60">点击上传 / Ctrl+V 粘贴</p>}
             </div>
           </button>
         )}
@@ -199,6 +224,7 @@ export function MultiFileUploadField({
   className,
 }) {
   const inputRef = useRef(null)
+  const { pushToast } = useApp()
   const [isDragging, setIsDragging] = useState(false)
   const [internalCropOpen, setInternalCropOpen] = useState(false)
   const [editIndex, setEditIndex] = useState(-1)
@@ -240,6 +266,23 @@ export function MultiFileUploadField({
       originalSourcesRef.current = [...originalSourcesRef.current.slice(0, values.length), ...newImages]
       onChange([...values, ...newImages])
     }
+  }
+
+  const handlePaste = async (event) => {
+    const pastedImage = await extractClipboardImage(event)
+    if (!pastedImage) return
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (values.length >= maxFiles) {
+      pushToast('warning', '附图已满', `最多只能上传 ${maxFiles} 张`)
+      return
+    }
+
+    originalSourcesRef.current = [...originalSourcesRef.current.slice(0, values.length), pastedImage]
+    onChange([...values, pastedImage])
+    pushToast('success', '已粘贴剪贴板图片', '可以继续添加下一张')
   }
 
   const handleFileChange = (e) => processFiles(e.target.files)
@@ -292,7 +335,7 @@ export function MultiFileUploadField({
   }
 
   return (
-    <div className={cn('space-y-4 text-left', className)}>
+    <div className={cn('space-y-4 text-left outline-none', className)} tabIndex={0} onPaste={handlePaste}>
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full ring-1", 
@@ -329,6 +372,7 @@ export function MultiFileUploadField({
               <Upload className="h-4 w-4" />
             </div>
             <p className="text-[10px] font-bold uppercase tracking-widest">点击或拖拽上传</p>
+            <p className="text-[9px] font-medium text-slate-400">也可以直接 Ctrl+V 粘贴</p>
           </div>
         </div>
       )}
@@ -385,7 +429,7 @@ export function MultiFileUploadField({
           handleApplyCrop(base64)
         }}
         title="调整附图裁剪"
-        subtitle="Fixed 3:4 preview with zoom"
+        subtitle="固定 3:4 预览与裁剪"
         badge="3:4"
         minZoom={0.6}
         maxZoom={3.2}

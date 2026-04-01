@@ -91,6 +91,14 @@ function AppProvider({ children }) {
   const [categoryOptions, setCategoryOptions] = useState(DEFAULT_CATEGORY_OPTIONS)
   const theme = 'sun'
 
+  const pushToast = useCallback((type, title, detail = '') => {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
+    setToasts((current) => [...current, { id, type, title, detail }])
+    window.setTimeout(() => {
+      setToasts((current) => current.filter((toast) => toast.id !== id))
+    }, 2600)
+  }, [])
+
   useEffect(() => {
     setAuthToken(session?.access_token || null)
     if (typeof window !== 'undefined') {
@@ -103,18 +111,21 @@ function AppProvider({ children }) {
   }, [session])
 
   useEffect(() => {
+    const handleSessionExpired = () => {
+      setSession(null)
+      setAuthToken(null)
+      pushToast('warning', '登录已过期', '请刷新页面后重新登录')
+    }
+
+    window.addEventListener('giftcraft:session-expired', handleSessionExpired)
+    return () => window.removeEventListener('giftcraft:session-expired', handleSessionExpired)
+  }, [pushToast])
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(cart))
     }
   }, [cart])
-
-  const pushToast = useCallback((type, title, detail = '') => {
-    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
-    setToasts((current) => [...current, { id, type, title, detail }])
-    window.setTimeout(() => {
-      setToasts((current) => current.filter((toast) => toast.id !== id))
-    }, 2600)
-  }, [])
 
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true)

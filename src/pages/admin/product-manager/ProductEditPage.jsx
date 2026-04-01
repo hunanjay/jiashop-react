@@ -6,6 +6,7 @@ import { Textarea } from '../../../components/ui/textarea'
 import { ImageCardUploader } from '../../../components/ui/ImageCardUploader'
 import { useApp } from '../../../lib/app-context'
 import { api } from '../../../lib/api'
+import { extractClipboardImage } from '../../../lib/clipboard-image'
 import { ArrowLeft, Save, Globe } from 'lucide-react'
 
 const EMPTY_FORM = {
@@ -25,6 +26,7 @@ export default function ProductEditPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [selectedPasteTarget, setSelectedPasteTarget] = useState('main')
 
   const isEdit = Boolean(id && id !== 'new')
 
@@ -63,23 +65,19 @@ export default function ProductEditPage() {
 
     setSaving(true)
     try {
-      // Step 1: Initial Sync (Database Metadata)
       const initialPayload = { 
         ...form,
         price: Number(form.price) || 0,
         stock: Number(form.stock) || 99
       }
-      
+
       let productId = id
-      if (isEdit) {
-        await api.put(`/products/${id}`, initialPayload)
-      } else {
+      if (!isEdit) {
         const res = await api.post('/products', initialPayload)
         productId = res.data.id || res.data._id
       }
-      pushToast('info', '元数据已同步', '正在上传资产...')
+      pushToast('info', '正在保存', '图片会在保存后自动上传...')
 
-      // Step 2: Asset Upload (OSS)
       let finalImageUrl = form.image_url
       let finalImages = [...(form.images || [])]
       let needsUpdate = false
@@ -104,12 +102,15 @@ export default function ProductEditPage() {
         finalImages = uploaded
       }
 
-      // Step 3: Final Sync (Reconcile OSS Keys)
-      if (needsUpdate) {
+      const finalPayload = {
+        ...initialPayload,
+        image_url: finalImageUrl,
+        images: finalImages,
+      }
+
+      if (isEdit || needsUpdate) {
         await api.put(`/products/${productId}`, {
-          ...initialPayload,
-          image_url: finalImageUrl,
-          images: finalImages
+          ...finalPayload,
         })
       }
 
@@ -124,31 +125,71 @@ export default function ProductEditPage() {
     }
   }
 
-  const updateGalleryImage = (index, val) => {
-    const next = [...(form.images || [])]
-    if (val === null) {
-      next.splice(index, 1)
-    } else {
-      next[index] = val
-    }
-    setForm((c) => ({ ...c, images: next }))
-  }
+  const updateGalleryImage = useCallback((index, val) => {
+    setForm((current) => {
+      const next = [...(current.images || [])]
+      if (val === null) {
+        next.splice(index, 1)
+      } else {
+        next[index] = val
+      }
+      return { ...current, images: next }
+    })
+  }, [])
 
-  const addGalleryImage = (val) => {
-    if ((form.images || []).length >= 5) return
-    setForm((c) => ({ ...c, images: [...(form.images || []), val] }))
-  }
+  const addGalleryImage = useCallback((val) => {
+    setForm((current) => {
+      const next = [...(current.images || [])]
+      if (next.length >= 5) return current
+      return { ...current, images: [...next, val] }
+    })
+  }, [])
 
-  const moveGalleryImage = (e, index, direction) => {
+  const moveGalleryImage = useCallback((e, index, direction) => {
     e.stopPropagation()
-    const next = [...(form.images || [])]
-    const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= next.length) return
-    const temp = next[index]
-    next[index] = next[targetIndex]
-    next[targetIndex] = temp
-    setForm((c) => ({ ...c, images: next }))
-  }
+    setForm((current) => {
+      const next = [...(current.images || [])]
+      const targetIndex = index + direction
+      if (targetIndex < 0 || targetIndex >= next.length) return current
+      const temp = next[index]
+      next[index] = next[targetIndex]
+      next[targetIndex] = temp
+      return { ...current, images: next }
+    })
+  }, [])
+
+  const handlePasteImage = useCallback(async (event) => {
+    const pastedImage = await extractClipboardImage(event)
+    if (!pastedImage) return
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (selectedPasteTarget === 'main') {
+      setForm((current) => ({ ...current, image_url: pastedImage }))
+      pushToast('success', '主图已选中', '已粘贴到主图位置')
+      return
+    }
+
+    if (typeof selectedPasteTarget === 'string' && selectedPasteTarget.startsWith('gallery-')) {
+      const suffix = selectedPasteTarget.slice('gallery-'.length)
+      if (suffix === 'new') {
+        addGalleryImage(pastedImage)
+        pushToast('success', '附图已选中', '已粘贴到新附图位置')
+        return
+      }
+
+      const index = Number(suffix)
+      if (!Number.isNaN(index)) {
+        updateGalleryImage(index, pastedImage)
+        pushToast('success', '附图已选中', `已粘贴到第 ${index + 1} 张附图`)
+        return
+      }
+    }
+
+    setForm((current) => ({ ...current, image_url: pastedImage }))
+    pushToast('success', '主图已选中', '已粘贴到主图位置')
+  }, [addGalleryImage, pushToast, selectedPasteTarget, updateGalleryImage])
 
   if (loading) {
     return (
@@ -266,7 +307,7 @@ export default function ProductEditPage() {
             </div>
           </div>
 
-          <aside className="h-full overflow-y-auto bg-slate-50/50 p-6 scrollbar-hide lg:p-10 xl:p-12">
+          <aside className="h-full overflow-y-auto bg-slate-50/50 p-6 scrollbar-hide lg:p-10 xl:p-12" onPasteCapture={handlePasteImage}>
             <div className="mx-auto max-w-3xl space-y-8 animate-in fade-in slide-in-from-right-4 duration-700">
               <header className="flex items-center justify-between border-b border-black/5 pb-4">
                 <h3 className="text-sm font-black tracking-[0.2em] text-slate-900">商品图片</h3>
@@ -277,13 +318,21 @@ export default function ProductEditPage() {
                   <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400">主图</h4>
                   <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold tracking-tighter text-blue-600 ring-1 ring-blue-500/10">800×800</span>
                 </div>
-                <div className="mx-auto max-w-[360px]">
+                <p className="text-[10px] font-medium text-slate-400">支持点击上传，也支持直接粘贴剪贴板图片</p>
+                <div
+                  className={`mx-auto max-w-[360px] rounded-[36px] p-1 transition-all ${selectedPasteTarget === 'main' ? 'bg-blue-50 ring-2 ring-blue-500/20' : ''}`}
+                >
                   <ImageCardUploader
                     value={form.image_url}
                     aspectRatio={1}
                     outputWidth={800}
                     outputHeight={800}
-                    onChange={(val) => setForm((c) => ({ ...c, image_url: val }))}
+                    enablePaste={false}
+                    onActivate={() => setSelectedPasteTarget('main')}
+                    onChange={(val) => {
+                      setSelectedPasteTarget('main')
+                      setForm((c) => ({ ...c, image_url: val }))
+                    }}
                   />
                 </div>
               </section>
@@ -293,6 +342,7 @@ export default function ProductEditPage() {
                   <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400">附图 ({(form.images || []).length}/5)</h4>
                   <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">3:4</span>
                 </div>
+                <p className="text-[10px] font-medium text-slate-400">点击空白卡片或图片区后，可直接 Ctrl+V 粘贴图片</p>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {(form.images || []).map((img, idx) => (
@@ -316,34 +366,53 @@ export default function ProductEditPage() {
                         next.splice(idx, 0, moved)
                         setForm(c => ({ ...c, images: next }))
                       }}
-                      className="relative group cursor-grab active:cursor-grabbing transition-all hover:ring-2 hover:ring-blue-500 rounded-3xl overflow-hidden"
+                      className={`relative group cursor-grab active:cursor-grabbing transition-all hover:ring-2 hover:ring-blue-500 rounded-3xl overflow-hidden ${selectedPasteTarget === `gallery-${idx}` ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
                     >
-                      <ImageCardUploader
-                        value={img}
-                        aspectRatio={3 / 4}
-                        outputWidth={800}
-                        outputHeight={1067}
-                        onChange={(val) => updateGalleryImage(idx, val)}
+                        <ImageCardUploader
+                          value={img}
+                          aspectRatio={3 / 4}
+                          outputWidth={800}
+                          outputHeight={1067}
+                          enablePaste={false}
+                          onActivate={() => setSelectedPasteTarget(`gallery-${idx}`)}
+                          onChange={(val) => {
+                            setSelectedPasteTarget(`gallery-${idx}`)
+                            updateGalleryImage(idx, val)
+                          }}
                         className="space-y-0"
                       />
                     </div>
                   ))}
                   {(form.images || []).length < 5 && (
-                    <ImageCardUploader
-                      value={null}
-                      aspectRatio={3 / 4}
-                      outputWidth={800}
-                      outputHeight={1067}
-                      onChange={(val) => addGalleryImage(val)}
-                      onFilesSelect={(vals) => {
-                        const current = form.images || []
-                        const remaining = 5 - current.length
-                        const toAdd = vals.slice(0, remaining)
-                        setForm(c => ({ ...c, images: [...current, ...toAdd] }))
-                      }}
-                      multiple={true}
-                      className="space-y-0"
-                    />
+                    <div
+                      className={`relative group rounded-3xl overflow-hidden transition-all ${selectedPasteTarget === 'gallery-new' ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
+                    >
+                      <ImageCardUploader
+                        value={null}
+                        aspectRatio={3 / 4}
+                        outputWidth={800}
+                        outputHeight={1067}
+                        enablePaste={false}
+                        onActivate={() => setSelectedPasteTarget('gallery-new')}
+                        onChange={(val) => {
+                          setSelectedPasteTarget('gallery-new')
+                          addGalleryImage(val)
+                        }}
+                        onFilesSelect={(vals) => {
+                          setSelectedPasteTarget('gallery-new')
+                          const filtered = vals.filter(Boolean)
+                          if (!filtered.length) return
+                          setForm((current) => {
+                            const currentImages = current.images || []
+                            const remaining = 5 - currentImages.length
+                            if (remaining <= 0) return current
+                            return { ...current, images: [...currentImages, ...filtered.slice(0, remaining)] }
+                          })
+                        }}
+                        multiple={true}
+                        className="space-y-0"
+                      />
+                    </div>
                   )}
                 </div>
               </section>

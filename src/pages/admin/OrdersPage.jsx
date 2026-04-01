@@ -262,10 +262,12 @@ export default function OrdersPage({ scope = 'admin' }) {
         finalPayload.effect_images = uploadedImages
       }
 
-
       if (selectedId) {
-        await api.put(`/admin/orders/${selectedId}/status`, { status: finalPayload.status })
-        pushToast('success', '订单状态已更新')
+        const updatePath = scope === 'workspace'
+          ? `/workspace/orders/${selectedId}`
+          : `/admin/orders/${selectedId}`
+        await api.put(updatePath, finalPayload)
+        pushToast('success', '订单已更新')
       } else {
         await api.post(scope === 'workspace' ? '/workspace/orders' : '/admin/orders', finalPayload)
         pushToast('success', '订单已创建')

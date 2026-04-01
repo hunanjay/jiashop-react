@@ -3,6 +3,11 @@ import axios from 'axios'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api'
 let refreshPromise = null
 
+function emitSessionExpired(reason = 'session-expired') {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('giftcraft:session-expired', { detail: { reason } }))
+}
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
 })
@@ -46,6 +51,9 @@ api.interceptors.response.use(
       }
 
       if (!refreshToken) {
+        if (sessionRaw) {
+          emitSessionExpired('missing-refresh-token')
+        }
         return Promise.reject(error)
       }
 
@@ -65,6 +73,9 @@ api.interceptors.response.use(
         const refreshResponse = await refreshPromise
         const nextAccessToken = refreshResponse.data?.access_token
         if (!nextAccessToken) {
+          if (sessionRaw) {
+            emitSessionExpired('missing-access-token')
+          }
           return Promise.reject(error)
         }
 
@@ -87,6 +98,9 @@ api.interceptors.response.use(
           window.localStorage.removeItem('giftcraft-session')
         }
         delete api.defaults.headers.common.Authorization
+        if (sessionRaw) {
+          emitSessionExpired('refresh-failed')
+        }
       }
     }
 

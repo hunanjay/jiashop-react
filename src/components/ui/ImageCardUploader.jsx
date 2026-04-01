@@ -4,16 +4,19 @@ import { Card, CardContent } from "./card";
 import { Upload, X, Edit } from "lucide-react";
 import { useApp } from "../../lib/app-context";
 import { cn } from "../../lib/utils";
+import { extractClipboardImage } from "../../lib/clipboard-image";
 
 export function ImageCardUploader({ 
   value, 
   onChange, 
   onFilesSelect,
+  onActivate,
   label = "上传图片", 
   aspectRatio = 1,
   outputWidth = 800,
   outputHeight = 800,
   multiple = false,
+  enablePaste = true,
   className 
 }) {
   const { pushToast } = useApp();
@@ -91,8 +94,28 @@ export function ImageCardUploader({
     }
   };
 
+  const handlePaste = async (event) => {
+    if (!enablePaste) return
+    const pastedImage = await extractClipboardImage(event)
+    if (!pastedImage) return
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (multiple && onFilesSelect) {
+      onFilesSelect([pastedImage])
+      return
+    }
+
+    setCropImage(pastedImage)
+  };
+
   return (
-    <div className={cn("space-y-3", className)}>
+    <div
+      className={cn("space-y-3 outline-none", className)}
+      tabIndex={0}
+      onPaste={handlePaste}
+    >
       <div className="flex items-center justify-between">
         <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</h4>
       </div>
@@ -100,7 +123,11 @@ export function ImageCardUploader({
       {currentImage ? (
         <Card className="relative w-full overflow-hidden group border-none shadow-none bg-slate-100/50 rounded-3xl ring-1 ring-black/5 hover:ring-blue-500/20 transition-all">
           <CardContent className="p-2">
-            <div className="relative bg-white rounded-[20px] overflow-hidden shadow-sm" style={{ aspectRatio }}>
+            <div
+              className="relative bg-white rounded-[20px] overflow-hidden shadow-sm cursor-pointer"
+              style={{ aspectRatio }}
+              onClick={() => onActivate?.()}
+            >
               <img
                 src={currentImage.url}
                 alt={label}
@@ -125,14 +152,24 @@ export function ImageCardUploader({
         </Card>
       ) : (
         <div
-          onClick={() => inputRef.current?.click()}
-          className="w-full border-2 border-dashed border-slate-200 bg-white/40 rounded-[28px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
+          onClick={() => onActivate?.()}
+          className="w-full border-2 border-dashed border-slate-200 bg-white/40 rounded-[28px] flex flex-col items-center justify-center hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
           style={{ aspectRatio }}
         >
-          <div className="h-12 w-12 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 flex items-center justify-center mb-3 group-hover:shadow-md transition-all duration-500">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onActivate?.()
+              inputRef.current?.click()
+            }}
+            className="h-12 w-12 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 flex items-center justify-center mb-3 group-hover:shadow-md transition-all duration-500 cursor-pointer hover:scale-105 active:scale-95"
+            aria-label={`上传${label}`}
+          >
              <Upload className="h-5 w-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
-          </div>
+          </button>
           <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">上传图片</p>
+          {enablePaste && <p className="mt-1 text-[9px] font-medium text-slate-400">点击后可直接 Ctrl+V 粘贴</p>}
         </div>
       )}
 
