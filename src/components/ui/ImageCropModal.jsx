@@ -128,7 +128,7 @@ async function getCroppedImg(imageSrc, pixelCrop, options = {}) {
   );
 
   return new Promise((resolve) => {
-    canvas.toBlob((blob) => {
+    const exportAsDataUrl = (blob) => {
       if (!blob) {
         return;
       }
@@ -137,7 +137,21 @@ async function getCroppedImg(imageSrc, pixelCrop, options = {}) {
         resolve(reader.result);
       };
       reader.readAsDataURL(blob);
-    }, "image/jpeg", 0.92);
+    };
+
+    // WebP usually gives much smaller payloads than JPEG for upload-heavy flows.
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          exportAsDataUrl(blob);
+          return;
+        }
+
+        canvas.toBlob(exportAsDataUrl, "image/jpeg", 0.88);
+      },
+      "image/webp",
+      0.82
+    );
   });
 }
 

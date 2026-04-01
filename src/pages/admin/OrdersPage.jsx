@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Edit3, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 
 import { api } from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/api-error'
 import { useApp } from '../../lib/app-context'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -40,17 +41,6 @@ const EMPTY_FORM = {
   items: [{ product_id: '', product_name: '', product_query: '', qty: 1 }],
 }
 
-function resolveApiError(error, fallback = '请稍后重试') {
-  const payload = error?.response?.data
-  if (typeof payload === 'string' && payload.trim()) return payload.trim()
-  if (payload && typeof payload === 'object') {
-    const text = [payload.error, payload.message, payload.detail].find((item) => typeof item === 'string' && item.trim())
-    if (text) return text.trim()
-  }
-  if (typeof error?.message === 'string' && error.message.trim()) return error.message.trim()
-  return fallback
-}
-
 function getStatusLabel(status) {
   return STATUS_LABELS[status] || status || '未知状态'
 }
@@ -84,7 +74,7 @@ export default function OrdersPage({ scope = 'admin' }) {
       const response = await api.get('/admin/orders')
       setOrders(response.data || [])
     } catch (error) {
-      pushToast('error', '订单加载失败', resolveApiError(error))
+      pushToast('error', '订单加载失败', getApiErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -96,7 +86,7 @@ export default function OrdersPage({ scope = 'admin' }) {
       const response = await api.get('/workspace/orders')
       setWorkspaceOrders(response.data || [])
     } catch (error) {
-      pushToast('error', '订单加载失败', resolveApiError(error))
+      pushToast('error', '订单加载失败', getApiErrorMessage(error))
     } finally {
       setWorkspaceLoading(false)
     }
@@ -108,7 +98,7 @@ export default function OrdersPage({ scope = 'admin' }) {
       setCustomers(response.data || [])
     } catch (error) {
       setCustomers([])
-      pushToast('error', '客户列表加载失败', resolveApiError(error))
+      pushToast('error', '客户列表加载失败', getApiErrorMessage(error))
     }
   }, [pushToast, scope])
 
@@ -277,7 +267,7 @@ export default function OrdersPage({ scope = 'admin' }) {
       setSaveConfirmOpen(false)
       setPendingSavePayload(null)
     } catch (error) {
-      pushToast('error', '保存失败', resolveApiError(error))
+      pushToast('error', '保存失败', getApiErrorMessage(error))
     } finally {
       setSaving(false)
     }
@@ -299,7 +289,7 @@ export default function OrdersPage({ scope = 'admin' }) {
       const response = await api.get(timelinePath)
       setTimeline(response.data || [])
     } catch (error) {
-      pushToast('error', '时间线加载失败', resolveApiError(error))
+      pushToast('error', '时间线加载失败', getApiErrorMessage(error))
     }
   }
 
@@ -318,7 +308,7 @@ export default function OrdersPage({ scope = 'admin' }) {
       const response = await api.get(timelinePath)
       setTimeline(response.data || [])
     } catch (error) {
-      pushToast('error', '备注保存失败', resolveApiError(error))
+      pushToast('error', '备注保存失败', getApiErrorMessage(error))
     }
   }
 
@@ -334,7 +324,7 @@ export default function OrdersPage({ scope = 'admin' }) {
     } catch (error) {
       setOrders((current) => current.map((item) => (item.id === order.id ? { ...item, status: previousStatus } : item)))
       setWorkspaceOrders((current) => current.map((item) => (item.id === order.id ? { ...item, status: previousStatus } : item)))
-      pushToast('error', '状态更新失败', resolveApiError(error))
+      pushToast('error', '状态更新失败', getApiErrorMessage(error))
     } finally {
       setStatusUpdatingId(null)
     }
@@ -707,7 +697,7 @@ export default function OrdersPage({ scope = 'admin' }) {
 
                 <div className="space-y-4">
                   <MultiFileUploadField
-                    label="效果图（可多张）"
+                    label="效果图（可选，可多张）"
                     values={form.effect_images || []}
                     onChange={(nextValues) => setForm((current) => ({ ...current, effect_images: nextValues }))}
                     maxFiles={6}
@@ -715,6 +705,7 @@ export default function OrdersPage({ scope = 'admin' }) {
                     outputWidth={800}
                     outputHeight={1067}
                   />
+                  <div className="px-1 text-xs text-zinc-500">没有效果图也可以直接保存订单，后续再补传。</div>
                 </div>
 
                 <label className="block space-y-2 rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-xl">
@@ -781,8 +772,8 @@ export default function OrdersPage({ scope = 'admin' }) {
             await refreshOrders()
             setDeleteConfirmOpen(false)
             setPendingDelete(null)
-          } catch {
-            pushToast('error', '删除失败')
+          } catch (error) {
+            pushToast('error', '删除失败', getApiErrorMessage(error))
           } finally {
             setSaving(false)
           }

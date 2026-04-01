@@ -116,17 +116,30 @@ async function getCroppedImg(imageSrc, pixelCrop, options = {}) {
   );
 
   return new Promise((resolve) => {
-    canvas.toBlob((blob) => {
+    const exportAsDataUrl = (blob) => {
       if (!blob) {
         return;
       }
-      const fileUrl = URL.createObjectURL(blob);
       const reader = new FileReader();
       reader.onloadend = () => {
         resolve(reader.result);
       };
       reader.readAsDataURL(blob);
-    }, "image/jpeg", 0.92);
+    };
+
+    // Keep the crop output compact so it is less likely to hit request size limits.
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          exportAsDataUrl(blob);
+          return;
+        }
+
+        canvas.toBlob(exportAsDataUrl, "image/jpeg", 0.88);
+      },
+      "image/webp",
+      0.82
+    );
   });
 }
 

@@ -2,27 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { api } from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/api-error'
 import { useApp } from '../../lib/app-context'
 import { matchesProductQuery } from '../../lib/product-search'
 import { ConfirmDialog } from '../../components/ui/confirm-dialog'
 import ProductManagerToolbar from './product-manager/ProductManagerToolbar'
 import ProductManagerGrid from './product-manager/ProductManagerGrid'
 import ProductManagerCategoryModal from './product-manager/ProductManagerCategoryModal'
-
-function resolveApiError(error, fallback = '请稍后重试') {
-  const payload = error?.response?.data
-  if (typeof payload === 'string' && payload.trim()) {
-    return payload.trim()
-  }
-  if (payload && typeof payload === 'object') {
-    const explicit = [payload.error, payload.message, payload.detail].find((item) => typeof item === 'string' && item.trim())
-    if (explicit) return explicit.trim()
-  }
-  if (typeof error?.message === 'string' && error.message.trim()) {
-    return error.message.trim()
-  }
-  return fallback
-}
 
 export default function ProductManagerPage({ scope = 'admin' }) {
   const navigate = useNavigate()
@@ -103,7 +89,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
         const response = await api.get('/products')
         setWorkspaceProducts(response.data || [])
       } catch (error) {
-        pushToast('error', '商品加载失败', resolveApiError(error))
+        pushToast('error', '商品加载失败', getApiErrorMessage(error))
       } finally {
         setWorkspaceLoading(false)
       }
@@ -138,7 +124,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   useEffect(() => {
     if (!canManageCategoryDictionary) return
     refreshCategoryCatalog().catch((error) => {
-      pushToast('error', '类型字典加载失败', resolveApiError(error))
+      pushToast('error', '类型字典加载失败', getApiErrorMessage(error))
     })
   }, [canManageCategoryDictionary, refreshCategoryCatalog, pushToast])
 
@@ -226,7 +212,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       setNewCategoryName('')
       setNewCategorySort('0')
     } catch (error) {
-      pushToast('error', '类型操作失败', resolveApiError(error))
+      pushToast('error', '类型操作失败', getApiErrorMessage(error))
     } finally {
       setCategorySaving(false)
     }
@@ -303,7 +289,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
             setDeleteConfirmOpen(false)
             setPendingDelete(null)
           } catch (error) {
-            pushToast('error', '删除失败', resolveApiError(error))
+            pushToast('error', '删除失败', getApiErrorMessage(error))
           } finally {
             setSaving(false)
           }

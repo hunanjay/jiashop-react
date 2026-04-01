@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Check, ChevronDown, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react'
 
 import { api } from '../lib/api'
+import { getApiErrorMessage } from '../lib/api-error'
 import { useApp } from '../lib/app-context'
 import { Button } from '../components/ui/button'
 import { ConfirmDialog } from '../components/ui/confirm-dialog'
@@ -26,17 +27,6 @@ const SUMMARY_BUTTON_PRIMARY =
   `${SUMMARY_BUTTON_BASE} bg-[var(--primary)] text-[var(--on-primary)] hover:bg-[var(--primary-dim)]`
 const SUMMARY_BUTTON_DANGER =
   `${SUMMARY_BUTTON_BASE} border border-[var(--outline-variant)]/35 bg-[var(--surface-container-low)] text-[var(--on-surface-variant)] hover:border-rose-300 hover:text-rose-600`
-
-function resolveApiError(error, fallback = '请稍后重试') {
-  const payload = error?.response?.data
-  if (typeof payload === 'string' && payload.trim()) return payload.trim()
-  if (payload && typeof payload === 'object') {
-    const text = [payload.error, payload.message, payload.detail].find((item) => typeof item === 'string' && item.trim())
-    if (text) return text.trim()
-  }
-  if (typeof error?.message === 'string' && error.message.trim()) return error.message.trim()
-  return fallback
-}
 
 export default function CartPage() {
   const navigate = useNavigate()
@@ -76,7 +66,7 @@ export default function CartPage() {
       })
       .catch((error) => {
         if (!mounted) return
-        pushToast('error', '用户列表加载失败', resolveApiError(error))
+        pushToast('error', '用户列表加载失败', getApiErrorMessage(error))
       })
       .finally(() => {
         if (mounted) setLoadingUsers(false)
@@ -108,7 +98,7 @@ export default function CartPage() {
         })
         .catch((error) => {
           if (!mounted) return
-          pushToast('error', 'owner 检索失败', resolveApiError(error))
+          pushToast('error', 'owner 检索失败', getApiErrorMessage(error))
         })
         .finally(() => {
           if (mounted) setLoadingUsers(false)
@@ -198,7 +188,7 @@ export default function CartPage() {
       setCheckoutForm(EMPTY_CHECKOUT_FORM)
       pushToast('success', '下单成功', `${companyName} 的订单已创建`)
     } catch (error) {
-      pushToast('error', '下单失败', resolveApiError(error))
+      pushToast('error', '下单失败', getApiErrorMessage(error))
     } finally {
       setSubmitting(false)
     }

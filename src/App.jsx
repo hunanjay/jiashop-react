@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-
 
 import { AppContext } from './lib/app-context'
 import { api, setAuthToken } from './lib/api'
+import { getApiErrorMessage } from './lib/api-error'
 import AdminLayout from './layouts/AdminLayout'
 import ClientLayout from './layouts/ClientLayout'
 import LoginPage from './pages/LoginPage'
@@ -132,8 +133,8 @@ function AppProvider({ children }) {
     try {
       const response = await api.get('/products')
       setProducts(response.data || [])
-    } catch {
-      pushToast('error', '商品加载失败', '请检查后端服务是否已启动')
+    } catch (error) {
+      pushToast('error', '商品加载失败', getApiErrorMessage(error, '请检查后端服务是否已启动'))
     } finally {
       setLoadingProducts(false)
     }
