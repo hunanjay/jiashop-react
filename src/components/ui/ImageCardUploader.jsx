@@ -10,7 +10,9 @@ export function ImageCardUploader({
   onChange, 
   onFilesSelect,
   label = "上传图片", 
-  aspectRatio = 3/4,
+  aspectRatio = 1,
+  outputWidth = 800,
+  outputHeight = 800,
   multiple = false,
   className 
 }) {
@@ -98,7 +100,7 @@ export function ImageCardUploader({
       {currentImage ? (
         <Card className="relative w-full overflow-hidden group border-none shadow-none bg-slate-100/50 rounded-3xl ring-1 ring-black/5 hover:ring-blue-500/20 transition-all">
           <CardContent className="p-2">
-            <div className="relative aspect-[3/4] bg-white rounded-[20px] overflow-hidden shadow-sm">
+            <div className="relative bg-white rounded-[20px] overflow-hidden shadow-sm" style={{ aspectRatio }}>
               <img
                 src={currentImage.url}
                 alt={label}
@@ -124,7 +126,8 @@ export function ImageCardUploader({
       ) : (
         <div
           onClick={() => inputRef.current?.click()}
-          className="w-full aspect-[3/4] border-2 border-dashed border-slate-200 bg-white/40 rounded-[28px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
+          className="w-full border-2 border-dashed border-slate-200 bg-white/40 rounded-[28px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
+          style={{ aspectRatio }}
         >
           <div className="h-12 w-12 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 flex items-center justify-center mb-3 group-hover:shadow-md transition-all duration-500">
              <Upload className="h-5 w-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
@@ -149,6 +152,8 @@ export function ImageCardUploader({
           onClose={() => setCropImage(null)}
           onCropComplete={handleCropComplete}
           aspectRatio={aspectRatio}
+          outputWidth={outputWidth}
+          outputHeight={outputHeight}
         />
       )}
     </div>

@@ -60,8 +60,11 @@ export default function ProductFormModal({
             <div className="flex h-full flex-col overflow-y-auto border-r border-black/5 bg-slate-50/30 p-8 scrollbar-hide">
               <div className="space-y-10">
                 <ImageCardUploader
-                  label="主展示封面图 Main Cover"
+                  label="主展示封面图 Main Cover (800×800)"
                   value={form.image_url}
+                  aspectRatio={1}
+                  outputWidth={800}
+                  outputHeight={800}
                   onChange={(val) => setForm((c) => ({ ...c, image_url: val }))}
                 />
                 
@@ -75,6 +78,9 @@ export default function ProductFormModal({
                       <div key={idx} className="relative group">
                         <ImageCardUploader
                           value={img}
+                          aspectRatio={3 / 4}
+                          outputWidth={800}
+                          outputHeight={1067}
                           onChange={(val) => updateGalleryImage(idx, val)}
                           className="space-y-0"
                         />
@@ -99,6 +105,9 @@ export default function ProductFormModal({
                     {(form.images || []).length < 5 && (
                       <ImageCardUploader
                         value={null}
+                        aspectRatio={3 / 4}
+                        outputWidth={800}
+                        outputHeight={1067}
                         onChange={(val) => addGalleryImage(val)}
                         className="space-y-0"
                       />

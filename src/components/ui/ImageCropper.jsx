@@ -8,7 +8,9 @@ export function ImageCropper({
   open, 
   onClose, 
   onCropComplete,
-  aspectRatio = 1
+  aspectRatio = 1,
+  outputWidth,
+  outputHeight,
 }) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -25,7 +27,10 @@ export function ImageCropper({
     if (!croppedAreaPixels) return;
 
     try {
-      const croppedImage = await getCroppedImg(image, croppedAreaPixels);
+      const croppedImage = await getCroppedImg(image, croppedAreaPixels, {
+        outputWidth,
+        outputHeight,
+      });
       onCropComplete(croppedImage);
       onClose();
     } catch (error) {
@@ -81,7 +86,7 @@ export function ImageCropper({
 }
 
 // 辅助函数：生成裁剪后的图片
-async function getCroppedImg(imageSrc, pixelCrop) {
+async function getCroppedImg(imageSrc, pixelCrop, options = {}) {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -90,8 +95,13 @@ async function getCroppedImg(imageSrc, pixelCrop) {
     throw new Error("无法获取 canvas context");
   }
 
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  const outputWidth = options.outputWidth || Math.round(pixelCrop.width);
+  const outputHeight = options.outputHeight || Math.round(pixelCrop.height);
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   ctx.drawImage(
     image,
@@ -101,8 +111,8 @@ async function getCroppedImg(imageSrc, pixelCrop) {
     pixelCrop.height,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    outputWidth,
+    outputHeight
   );
 
   return new Promise((resolve) => {

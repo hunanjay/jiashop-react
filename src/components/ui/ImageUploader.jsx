@@ -11,7 +11,13 @@ export function ImageUploader({
   subImageUrls = [],
   onMainImageChange,
   onSubImagesChange,
-  maxSubImages = 5 
+  maxSubImages = 5,
+  mainAspectRatio = 1,
+  subAspectRatio = 3 / 4,
+  mainOutputWidth = 800,
+  mainOutputHeight = 800,
+  subOutputWidth = 800,
+  subOutputHeight = 1067,
 }) {
   const { pushToast } = useApp();
   const [mainImage, setMainImage] = useState(null);
@@ -147,12 +153,12 @@ export function ImageUploader({
       {/* 主图上传 */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-l-4 border-blue-600 pl-3">主展示封面 (3:4)</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-l-4 border-blue-600 pl-3">主展示封面 (800×800)</h3>
         </div>
         {mainImage ? (
           <Card className="relative w-full max-w-sm overflow-hidden group border-none shadow-none bg-slate-100/50 rounded-3xl ring-1 ring-black/5">
             <CardContent className="p-3">
-              <div className="relative aspect-[3/4] bg-white rounded-2xl overflow-hidden shadow-sm">
+              <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm" style={{ aspectRatio: mainAspectRatio }}>
                 <img
                   src={mainImage.url}
                   alt="主图"
@@ -180,7 +186,8 @@ export function ImageUploader({
         ) : (
           <div
             onClick={() => mainInputRef.current?.click()}
-            className="w-full max-w-sm aspect-[3/4] border-2 border-dashed border-slate-200 bg-white/40 rounded-[32px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
+            className="w-full max-w-sm border-2 border-dashed border-slate-200 bg-white/40 rounded-[32px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
+            style={{ aspectRatio: mainAspectRatio }}
           >
             <div className="h-16 w-16 rounded-3xl bg-white shadow-sm ring-1 ring-black/5 flex items-center justify-center mb-5 group-hover:shadow-md group-hover:rotate-6 transition-all duration-500">
                <Upload className="h-7 w-7 text-slate-400 group-hover:text-blue-500 transition-colors" />
@@ -201,7 +208,7 @@ export function ImageUploader({
       {/* 附图上传 */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-l-4 border-blue-600 pl-3">附属画廊库 ({subImages.length}/{maxSubImages})</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-l-4 border-blue-600 pl-3">附属画廊库 (3:4) ({subImages.length}/{maxSubImages})</h3>
             <span className="text-[10px] font-bold text-slate-400 uppercase tabular-nums">Gallery Slots</span>
         </div>
         
@@ -209,7 +216,7 @@ export function ImageUploader({
           {subImages.map((image, index) => (
             <Card key={image.id} className="relative w-full max-w-sm overflow-hidden group border-none shadow-none bg-slate-100/30 rounded-3xl ring-1 ring-black/5">
               <CardContent className="p-3">
-                <div className="relative aspect-[3/4] bg-white rounded-2xl overflow-hidden shadow-sm">
+                <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm" style={{ aspectRatio: subAspectRatio }}>
                   <img
                     src={image.url}
                     alt={`附图 ${index + 1}`}
@@ -240,7 +247,8 @@ export function ImageUploader({
           {subImages.length < maxSubImages && (
             <div
               onClick={() => subInputRef.current?.click()}
-              className="w-full max-w-sm aspect-[3/4] border-2 border-dashed border-slate-200 bg-white/40 rounded-[32px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
+              className="w-full max-w-sm border-2 border-dashed border-slate-200 bg-white/40 rounded-[32px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
+              style={{ aspectRatio: subAspectRatio }}
             >
               <div className="h-12 w-12 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 flex items-center justify-center mb-4 group-hover:shadow-md group-hover:rotate-[-6deg] transition-all duration-500">
                 <Upload className="h-5 w-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
@@ -272,7 +280,9 @@ export function ImageUploader({
             if (subInputRef.current) subInputRef.current.value = "";
           }}
           onCropComplete={handleCropComplete}
-          aspectRatio={3 / 4}
+          aspectRatio={currentCropType === "main" ? mainAspectRatio : subAspectRatio}
+          outputWidth={currentCropType === "main" ? mainOutputWidth : subOutputWidth}
+          outputHeight={currentCropType === "main" ? mainOutputHeight : subOutputHeight}
         />
       )}
     </div>

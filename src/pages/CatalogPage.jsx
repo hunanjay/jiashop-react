@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import { ChevronDown, ChevronUp, LayoutGrid, Search, Tag, X } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
-import { CARD_IMAGE_ASPECT } from '../components/ui/file-upload'
 import { FloatingCartButton } from '../components/cart/FloatingCartButton'
+
+const CARD_IMAGE_ASPECT = '1 / 1'
 
 const PRICE_FILTERS = [
   { label: '全部价格', value: 'all' },

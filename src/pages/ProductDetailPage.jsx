@@ -64,9 +64,8 @@ export default function ProductDetailPage() {
           </div>
 
           <div className="grid min-h-0 flex-1 gap-10 overflow-hidden lg:grid-cols-[auto_1fr] lg:items-stretch">
-            {/* Left Image Gallery with Fixed 3:4 Ratio */}
             <div className="flex flex-shrink-0 flex-col gap-5 overflow-hidden">
-              <div className="relative h-[72vh] aspect-[3/4] overflow-hidden rounded-[32px] border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] shadow-md transition-all hover:shadow-xl">
+              <div className="relative aspect-square max-h-[72vh] overflow-hidden rounded-[32px] border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] shadow-md transition-all hover:shadow-xl">
                 <div 
                   className="flex h-full w-full transition-transform duration-600 ease-out"
                   style={{ transform: `translateX(-${activeImageIndex * 100}%)` }}
@@ -76,7 +75,7 @@ export default function ProductDetailPage() {
                       key={idx} 
                       src={src} 
                       alt={`${product.name}-${idx}`} 
-                      className="h-full w-full flex-shrink-0 object-cover" 
+                      className="h-full w-full flex-shrink-0 object-contain bg-[var(--surface-container-lowest)]" 
                     />
                   ))}
                 </div>
@@ -102,7 +101,7 @@ export default function ProductDetailPage() {
                     <button
                       key={idx}
                       onClick={() => setActiveImageIndex(idx)}
-                      className={`relative aspect-[3/4] w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all duration-300 ${
+                      className={`relative aspect-square w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all duration-300 ${
                         idx === activeImageIndex 
                           ? 'border-[var(--primary)] shadow-sm ring-2 ring-[var(--primary)]/10' 
                           : 'border-transparent opacity-60 hover:opacity-100'

@@ -15,6 +15,9 @@ export function FileUploadField({
   value,
   onChange,
   accept = 'image/*',
+  aspectRatio = 1,
+  outputWidth = 800,
+  outputHeight = 800,
   className,
 }) {
   const inputRef = useRef(null)
@@ -101,7 +104,7 @@ export function FileUploadField({
     <>
       <div className={cn('overflow-hidden rounded-3xl border border-black/5 bg-slate-50/50 shadow-inner transition-all', className)}>
         {hasPreview ? (
-          <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-200">
+          <div className="relative w-full overflow-hidden bg-slate-200" style={{ aspectRatio }}>
             <img src={value} alt={label} className="h-full w-full object-cover" />
             <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 transition-opacity hover:opacity-100">
               <div className="flex gap-2">
@@ -142,14 +145,15 @@ export function FileUploadField({
             </div>
             <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold text-slate-800 backdrop-blur-md ring-1 ring-black/5 shadow-sm">
               <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-              主图规格 3:4
+              {aspectRatio === 1 ? '主图规格 800×800' : '主图规格 3:4'}
             </div>
           </div>
         ) : (
           <button
             type="button"
             onClick={handlePickFile}
-            className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 bg-white/40 text-slate-400 transition-colors hover:bg-white hover:text-slate-600"
+            className="flex w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 bg-white/40 text-slate-400 transition-colors hover:bg-white hover:text-slate-600"
+            style={{ aspectRatio }}
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 shadow-sm ring-1 ring-black/5">
               <Upload className="h-5 w-5" />
@@ -176,6 +180,9 @@ export function FileUploadField({
         maxZoom={5}
         confirmText="同步裁剪结果"
         savingText="正在生成..."
+        aspectRatio={aspectRatio}
+        outputWidth={outputWidth}
+        outputHeight={outputHeight}
       />
     </>
   )
@@ -185,6 +192,10 @@ export function MultiFileUploadField({
   label,
   values = [],
   onChange,
+  aspectRatio = 3 / 4,
+  outputWidth = 800,
+  outputHeight = 1067,
+  maxFiles = 5,
   className,
 }) {
   const inputRef = useRef(null)
@@ -201,14 +212,14 @@ export function MultiFileUploadField({
   }, [values])
 
   const handlePickFiles = () => {
-    if (values.length >= 5) return
+    if (values.length >= maxFiles) return
     if (inputRef.current) inputRef.current.value = ''
     inputRef.current?.click()
   }
 
   const processFiles = async (files) => {
     if (!files || files.length === 0) return
-    const remainingSlots = 5 - values.length
+    const remainingSlots = maxFiles - values.length
     if (remainingSlots <= 0) return
 
     const newImages = []
@@ -285,9 +296,9 @@ export function MultiFileUploadField({
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full ring-1", 
-          values.length >= 5 ? "bg-amber-50 text-amber-600 ring-amber-200" : "bg-blue-50 text-blue-600 ring-blue-100"
+          values.length >= maxFiles ? "bg-amber-50 text-amber-600 ring-amber-200" : "bg-blue-50 text-blue-600 ring-blue-100"
         )}>
-          {values.length} / 5
+          {values.length} / {maxFiles}
         </span>
       </div>
 
@@ -300,7 +311,7 @@ export function MultiFileUploadField({
         className="hidden"
       />
 
-      {values.length < 5 && (
+      {values.length < maxFiles && (
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -327,8 +338,9 @@ export function MultiFileUploadField({
           {values.map((src, index) => (
             <div
               key={index}
-              className="group relative aspect-[3/4] min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm ring-1 ring-black/5 transition hover:shadow-md"
-            >
+            className="group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm ring-1 ring-black/5 transition hover:shadow-md"
+            style={{ aspectRatio }}
+          >
               <img src={src} alt={`${label}-${index}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
               <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                 <button
@@ -379,6 +391,9 @@ export function MultiFileUploadField({
         maxZoom={3.2}
         confirmText="确认裁剪"
         savingText="同步中..."
+        aspectRatio={aspectRatio}
+        outputWidth={outputWidth}
+        outputHeight={outputHeight}
       />
     </div>
   )

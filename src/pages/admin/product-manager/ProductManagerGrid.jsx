@@ -1,7 +1,8 @@
 import { Edit3, Package, Trash2 } from 'lucide-react'
 
 import { formatCurrency } from '../../../lib/format'
-import { CARD_IMAGE_ASPECT } from '../../../components/ui/file-upload'
+
+const CARD_IMAGE_ASPECT = '1 / 1'
 
 export default function ProductManagerGrid({ products, loading, canEditProduct, canDeleteProduct, onEdit, onDelete, onReset }) {
   if (loading) {

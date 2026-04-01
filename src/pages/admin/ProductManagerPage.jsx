@@ -49,10 +49,12 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   const canEditProduct = useCallback(
     (product) => {
       if (!session || !product) return false
-      // Only the owner can edit, regardless of admin role in this context
-      return product?.owner_id === session?.user?.id
+      if (scope === 'workspace') {
+        return product?.owner_id === session?.user?.id
+      }
+      return ['admin', 'superadmin'].includes(session.role) || product?.owner_id === session?.user?.id
     },
-    [session],
+    [scope, session],
   )
   const canDeleteProduct = canEditProduct
 

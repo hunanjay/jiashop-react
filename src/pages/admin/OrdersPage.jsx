@@ -10,7 +10,7 @@ import { Input } from '../../components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '../../components/ui/modal'
 import { ConfirmDialog } from '../../components/ui/confirm-dialog'
-import { FileUploadField } from '../../components/ui/file-upload'
+import { MultiFileUploadField } from '../../components/ui/file-upload'
 import { formatCurrency, formatDateTime } from '../../lib/format'
 import { searchProducts } from '../../lib/product-search'
 
@@ -33,8 +33,7 @@ const EMPTY_FORM = {
   customer_id: '',
   customer_phone: '',
   shipping_address: '',
-  custom_logo_url: '',
-  design_file_url: '',
+  effect_images: [],
   remarks: '',
   total_price: '',
   status: 'Pending',
@@ -154,8 +153,11 @@ export default function OrdersPage({ scope = 'admin' }) {
       customer_id: order.customer_id || '',
       customer_phone: order.customer_phone || '',
       shipping_address: order.shipping_address || '',
-      custom_logo_url: order.custom_logo_url || '',
-      design_file_url: order.design_file_url || '',
+      effect_images: Array.isArray(order.effect_images)
+        ? order.effect_images
+        : order.design_file_url
+          ? [order.design_file_url]
+          : [],
       remarks: order.remarks || '',
       total_price: String(order.total_price || ''),
       status: order.status || 'Pending',
@@ -224,8 +226,7 @@ export default function OrdersPage({ scope = 'admin' }) {
       customer_id: form.customer_id.trim(),
       customer_phone: form.customer_phone.trim(),
       shipping_address: form.shipping_address.trim(),
-      custom_logo_url: form.custom_logo_url.trim(),
-      design_file_url: form.design_file_url.trim(),
+      effect_images: (form.effect_images || []).filter(Boolean),
       remarks: form.remarks.trim(),
       total_price: Number(form.total_price || 0),
       status: form.status,
@@ -248,13 +249,17 @@ export default function OrdersPage({ scope = 'admin' }) {
     try {
       let finalPayload = { ...pendingSavePayload }
 
-      if (finalPayload.custom_logo_url && finalPayload.custom_logo_url.startsWith('data:')) {
-        const uploadRes = await api.post('/upload', { image: finalPayload.custom_logo_url })
-        finalPayload.custom_logo_url = uploadRes.data.key
-      }
-      if (finalPayload.design_file_url && finalPayload.design_file_url.startsWith('data:')) {
-        const uploadRes = await api.post('/upload', { image: finalPayload.design_file_url })
-        finalPayload.design_file_url = uploadRes.data.key
+      if (Array.isArray(finalPayload.effect_images) && finalPayload.effect_images.length) {
+        const uploadedImages = []
+        for (const image of finalPayload.effect_images) {
+          if (typeof image === 'string' && image.startsWith('data:')) {
+            const uploadRes = await api.post('/upload', { image })
+            uploadedImages.push(uploadRes.data.key)
+          } else if (image) {
+            uploadedImages.push(image)
+          }
+        }
+        finalPayload.effect_images = uploadedImages
       }
 
 
@@ -286,7 +291,10 @@ export default function OrdersPage({ scope = 'admin' }) {
     setTimeline([])
     setNoteDraft(order.remarks || '')
     try {
-      const response = await api.get(`/admin/orders/${order.id}/timeline`)
+      const timelinePath = scope === 'workspace'
+        ? `/workspace/orders/${order.id}/timeline`
+        : `/admin/orders/${order.id}/timeline`
+      const response = await api.get(timelinePath)
       setTimeline(response.data || [])
     } catch (error) {
       pushToast('error', '时间线加载失败', resolveApiError(error))
@@ -296,10 +304,16 @@ export default function OrdersPage({ scope = 'admin' }) {
   const saveNote = async () => {
     if (!detailOrder || !noteDraft.trim()) return
     try {
-      await api.post(`/admin/orders/${detailOrder.id}/note`, { note: noteDraft.trim() })
+      const notePath = scope === 'workspace'
+        ? `/workspace/orders/${detailOrder.id}/note`
+        : `/admin/orders/${detailOrder.id}/note`
+      await api.post(notePath, { note: noteDraft.trim() })
       pushToast('success', '备注已更新')
       await refreshOrders()
-      const response = await api.get(`/admin/orders/${detailOrder.id}/timeline`)
+      const timelinePath = scope === 'workspace'
+        ? `/workspace/orders/${detailOrder.id}/timeline`
+        : `/admin/orders/${detailOrder.id}/timeline`
+      const response = await api.get(timelinePath)
       setTimeline(response.data || [])
     } catch (error) {
       pushToast('error', '备注保存失败', resolveApiError(error))
@@ -689,18 +703,15 @@ export default function OrdersPage({ scope = 'admin' }) {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FileUploadField
-                    label="Logo"
-                    value={form.custom_logo_url}
-                    onChange={(nextValue) => setForm((current) => ({ ...current, custom_logo_url: nextValue }))}
-                    helperText="前端转码后保存，适合直接贴到订单里"
-                  />
-                  <FileUploadField
-                    label="设计图"
-                    value={form.design_file_url}
-                    onChange={(nextValue) => setForm((current) => ({ ...current, design_file_url: nextValue }))}
-                    helperText="和 Logo 一样走前端转换，支持实时预览"
+                <div className="space-y-4">
+                  <MultiFileUploadField
+                    label="效果图（可多张）"
+                    values={form.effect_images || []}
+                    onChange={(nextValues) => setForm((current) => ({ ...current, effect_images: nextValues }))}
+                    maxFiles={6}
+                    aspectRatio={3 / 4}
+                    outputWidth={800}
+                    outputHeight={1067}
                   />
                 </div>
 
@@ -790,10 +801,24 @@ export default function OrdersPage({ scope = 'admin' }) {
                     <div className="text-xs text-zinc-500">客户</div>
                     <div className="mt-1 font-medium text-white">{detailOrder.customer_name}</div>
                   </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs text-zinc-500">状态</div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs text-zinc-500">状态</div>
                     <div className="mt-1 font-medium text-white">{getStatusLabel(detailOrder.status)}</div>
+                  </div>
                 </div>
+                <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs text-zinc-500">效果图</div>
+                  {Array.isArray(detailOrder.effect_images) && detailOrder.effect_images.length ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {detailOrder.effect_images.map((image, index) => (
+                        <div key={`${detailOrder.id}-${index}`} className="overflow-hidden rounded-2xl border border-white/10 bg-black/10" style={{ aspectRatio: 3 / 4 }}>
+                          <img src={image} alt={`效果图 ${index + 1}`} className="h-full w-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-zinc-500">暂无效果图</div>
+                  )}
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-xs text-zinc-500">备注</div>
