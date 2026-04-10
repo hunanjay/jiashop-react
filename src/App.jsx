@@ -20,6 +20,7 @@ import AdminAccountPage from './pages/admin/AccountManagerPage'
 import AdminExportPage from './pages/admin/ExportPage'
 import WorkspaceCustomerPage from './pages/admin/CustomerManagerPage'
 import ProductEditPage from './pages/admin/product-manager/ProductEditPage'
+import AiChatWidget from './components/AiChat/AiChatWidget'
 
 const DEFAULT_CATEGORY_OPTIONS = [
   { label: '全部分类', value: 'all' },
@@ -441,6 +442,7 @@ export default function App() {
     <AppProvider>
       <BrowserRouter>
         <AppRoutes />
+        <AiChatWidget />
       </BrowserRouter>
     </AppProvider>
   )
