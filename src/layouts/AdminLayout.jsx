@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Download,
   LayoutDashboard,
   LogOut,
@@ -10,10 +11,10 @@ import {
   ReceiptText,
   ShieldCheck,
   Users,
+  X,
 } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
 import { ConfirmDialog } from '../components/ui/confirm-dialog'
 
 const adminNavigation = [
@@ -36,121 +37,167 @@ const workspaceNavigation = [
 export default function AdminLayout({ scope = 'admin' }) {
   const { session, logout, isSuperAdmin } = useApp()
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
 
   const currentNavigation = scope === 'workspace' ? workspaceNavigation : adminNavigation
   const visibleNavigation = currentNavigation.filter((item) => item.to !== '/admin/rbac' || isSuperAdmin)
   const isWorkspaceScope = scope === 'workspace'
-  const menuTitle = isWorkspaceScope ? '工作台菜单' : '管理菜单'
   const panelLabel = isWorkspaceScope ? 'Workspace' : 'Ops Panel'
-  const appTextClass = 'text-zinc-900'
-  const shellBackgroundClass = 'bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.15),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.16),_transparent_24%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_52%,_#ecfeff_100%)]'
-  const navClass = 'border-b border-sky-200/70 bg-white/75 px-3 py-2.5 backdrop-blur-2xl lg:px-4'
-  const appNameClass = 'text-zinc-900'
-  const panelClass = 'text-sky-700/70'
-  const activeNavClass = 'bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 text-white shadow-[0_14px_30px_rgba(14,165,233,0.24)]'
-  const inactiveNavClass = 'border border-sky-100 bg-white/80 text-slate-700 hover:bg-white hover:text-slate-900'
-  const accountCardClass = 'ml-auto hidden items-center gap-3 rounded-full border border-sky-200 bg-white/80 px-2 py-1.5 shadow-sm sm:flex'
-  const usernameClass = 'text-zinc-900'
-  const roleClass = 'text-sky-700/70'
-  const iconButtonClass = 'inline-flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sky-700 transition hover:bg-sky-200 hover:text-sky-900'
-  const chevronClass = 'h-4 w-4 text-sky-700/70'
-  const mobileMenuButtonClass = 'inline-flex h-9 w-9 items-center justify-center rounded-full border border-sky-200 bg-white/80 text-sky-800 shadow-sm'
-  const sheetClass = 'max-w-[320px] bg-[#f8fafc]/95 text-slate-900'
-  const mobileActiveNavClass = 'bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 text-white'
-  const mobileInactiveNavClass = 'border border-sky-100 bg-white text-slate-700 shadow-sm'
+  const rootPrefix = isWorkspaceScope ? '/workspace' : '/admin'
 
-  return (
-    <div className={`admin-shell min-h-screen theme-sun ${appTextClass}`}>
-      <div className={`min-h-screen w-full ${shellBackgroundClass}`}>
-        <nav className={navClass}>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-400 text-white shadow-[0_12px_30px_rgba(129,140,248,0.28)]">
-                <Package className="h-4.5 w-4.5" />
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`text-[15px] font-semibold tracking-[-0.03em] ${appNameClass}`}>琵琶行</div>
-                <div className="hidden h-4 w-px bg-white/10 lg:block" />
-                <div className={`hidden text-[11px] font-medium uppercase tracking-[0.18em] lg:block ${panelClass}`}>
-                  {panelLabel}
-                </div>
-              </div>
+  const sidebarWidth = collapsed ? 'lg:w-[72px]' : 'lg:w-[220px]'
+
+  function SidebarContent() {
+    return (
+      <div className="flex h-full flex-col">
+        {/* Brand */}
+        <div className={`flex items-center gap-3 border-b border-gray-100 px-4 py-5 ${collapsed ? 'justify-center' : ''}`}>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm">
+            <Package className="h-4 w-4 text-white" />
+          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="truncate text-[15px] font-bold text-gray-900">jiajia'Shop</div>
+              <div className="text-[10px] font-medium uppercase tracking-widest text-gray-400">{panelLabel}</div>
             </div>
+          )}
+        </div>
 
-            <div className="hidden flex-1 items-center justify-center gap-2 overflow-x-auto px-4 lg:flex">
-              {visibleNavigation.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/admin' || item.to === '/workspace'}
-                  className={({ isActive }) =>
-                    [
-                      'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium transition',
-                      isActive ? activeNavClass : inactiveNavClass,
-                    ].join(' ')
-                  }
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </NavLink>
-              ))}
+        {/* Nav */}
+        <nav className="flex-1 space-y-0.5 px-3 py-4">
+          {visibleNavigation.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === rootPrefix}
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                [
+                  'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150',
+                  collapsed ? 'justify-center' : '',
+                  isActive
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                ].join(' ')
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Account */}
+        <div className="border-t border-gray-100 p-3">
+          <div className={`flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2.5 ${collapsed ? 'justify-center' : ''}`}>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white shadow-sm">
+              {session?.username?.slice(0, 1).toUpperCase()}
             </div>
-
-            <div className={accountCardClass}>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-400 text-white shadow-[0_12px_24px_rgba(129,140,248,0.28)]">
-                {session?.username?.slice(0, 1).toUpperCase()}
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-gray-900">{session?.username}</div>
+                <div className="text-[11px] text-gray-500">{session?.role}</div>
               </div>
-              <div className="hidden md:block">
-                <div className={`text-sm font-semibold ${usernameClass}`}>{session?.username}</div>
-                <div className={`text-xs ${roleClass}`}>{session?.role}</div>
-              </div>
+            )}
+            {!collapsed && (
               <button
                 type="button"
                 onClick={() => setLogoutConfirmOpen(true)}
-                className={iconButtonClass}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-3.5 w-3.5" />
               </button>
-              <ChevronDown className={chevronClass} />
-            </div>
+            )}
+          </div>
+          {collapsed && (
+            <button
+              type="button"
+              onClick={() => setLogoutConfirmOpen(true)}
+              className="mt-2 flex w-full items-center justify-center rounded-lg py-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
-            <div className="ml-auto lg:hidden">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <button type="button" className={mobileMenuButtonClass}>
-                    <Menu className="h-5 w-5" />
-                  </button>
-                </SheetTrigger>
-                <SheetContent side="left" className={sheetClass}>
-                  <SheetHeader>
-                    <SheetTitle>{menuTitle}</SheetTitle>
-                  </SheetHeader>
-                  <div className="space-y-3 p-5">
-                    {visibleNavigation.map((item) => (
-                      <NavLink
-                        key={item.to}
-                        to={item.to}
-                        end={item.to === '/admin' || item.to === '/workspace'}
-                        className={({ isActive }) =>
-                          [
-                            'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition',
-                            isActive ? mobileActiveNavClass : mobileInactiveNavClass,
-                          ].join(' ')
-                        }
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
+        {/* Collapse toggle (desktop only) */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((prev) => !prev)}
+          className="hidden lg:flex items-center justify-center gap-2 border-t border-gray-100 px-4 py-3 text-[11px] font-medium text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-600"
+        >
+          {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : (
+            <>
+              <ChevronLeft className="h-3.5 w-3.5" />
+              <span>收起菜单</span>
+            </>
+          )}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Desktop sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 hidden flex-col bg-white border-r border-gray-200 shadow-sm transition-all duration-200 lg:flex ${sidebarWidth}`}
+      >
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMobileOpen(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <aside
+            className="absolute inset-y-0 left-0 w-[240px] bg-white border-r border-gray-200 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <SidebarContent />
+          </aside>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className={`flex min-h-screen flex-1 flex-col transition-all duration-200 ${collapsed ? 'lg:ml-[72px]' : 'lg:ml-[220px]'}`}>
+        {/* Mobile top bar */}
+        <header className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 shadow-sm lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 shadow-sm"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+              <Package className="h-3.5 w-3.5" />
+            </div>
+            <span className="text-sm font-semibold text-gray-900">jiajia'Shop</span>
+            <span className="text-[10px] font-medium uppercase tracking-widest text-gray-400">{panelLabel}</span>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white shadow-sm">
+              {session?.username?.slice(0, 1).toUpperCase()}
             </div>
           </div>
-        </nav>
+        </header>
 
-        <main className="px-3 py-3 sm:px-4 lg:px-4">
+        <main className="flex-1 px-4 py-5 sm:px-6 lg:px-6 lg:py-6">
           <Outlet />
         </main>
       </div>

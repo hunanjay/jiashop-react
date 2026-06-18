@@ -19,6 +19,7 @@ export default function ProductManagerCategoryModal({
   onCreateCategory,
   onUpdateCategory,
   onToggleCategory,
+  onDeleteCategory,
 }) {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null)
 
@@ -44,34 +45,40 @@ export default function ProductManagerCategoryModal({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
-      <ModalContent className="max-w-6xl border-white/10 bg-[#111114]/96 text-zinc-100 shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
-        <ModalHeader className="border-b border-white/10 bg-white/5">
+      <ModalContent className="max-w-6xl border border-gray-200 bg-white text-gray-900 shadow-xl rounded-xl">
+        <ModalHeader className="border-b border-gray-200 bg-gray-50/75 rounded-t-xl">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">类型字典</h2>
-              <p className="mt-2 text-sm leading-6 text-zinc-500">左边看列表，右边直接编辑，减少滚动。</p>
+              <h2 className="text-2xl font-semibold text-gray-900">类型字典</h2>
+              <p className="mt-2 text-sm leading-6 text-gray-500">左边看列表，右边直接编辑，减少滚动。</p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline">{categoryCatalog.length} items</Badge>
-              <Badge variant="outline">User / Admin / SuperAdmin</Badge>
+              <Badge variant="outline" className="border-gray-200 text-gray-700 bg-white">
+                {categoryCatalog.length} items
+              </Badge>
+              <Badge variant="outline" className="border-gray-200 text-gray-700 bg-white">
+                User / Admin / SuperAdmin
+              </Badge>
             </div>
           </div>
         </ModalHeader>
 
         <ModalBody>
           <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold text-white">分类列表</div>
-                  <div className="mt-1 text-xs text-zinc-500">点击一项进行编辑</div>
+                  <div className="text-sm font-semibold text-gray-900">分类列表</div>
+                  <div className="mt-1 text-xs text-gray-500">点击一项进行编辑</div>
                 </div>
-                <Badge variant="outline">{categoryCatalog.length}</Badge>
+                <Badge variant="outline" className="border-gray-200 text-gray-700 bg-white">
+                  {categoryCatalog.length}
+                </Badge>
               </div>
 
               <div className="mt-4 max-h-[58vh] space-y-2 overflow-y-auto pr-1">
                 {categoryLoading ? (
-                  <div className="rounded-[18px] border border-white/10 bg-white/6 px-4 py-6 text-sm text-zinc-500">
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
                     正在加载类型字典...
                   </div>
                 ) : categoryCatalog.length ? (
@@ -83,21 +90,21 @@ export default function ProductManagerCategoryModal({
                         type="button"
                         onClick={() => setSelectedCategoryId(item.id)}
                         className={[
-                          'flex w-full items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-left transition',
+                          'flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition',
                           active
-                            ? 'border-transparent bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400 text-white shadow-[0_14px_30px_rgba(99,102,241,0.18)]'
-                            : 'border-white/10 bg-white/6 hover:border-white/20 hover:bg-white/10',
+                            ? 'bg-blue-50 border-l-4 border-blue-700 border-y-blue-100 border-r-blue-100 text-blue-900'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50',
                         ].join(' ')}
                       >
                         <div className="min-w-0">
                           <div className="truncate text-sm font-semibold">{item.name}</div>
-                          <div className={['mt-1 text-xs', active ? 'text-white/70' : 'text-zinc-500'].join(' ')}>
+                          <div className={['mt-1 text-xs', active ? 'text-blue-700 font-medium' : 'text-gray-500'].join(' ')}>
                             sort {item.sort_order ?? 0}
                           </div>
                         </div>
                         <Badge
                           variant={item.active ? 'default' : 'secondary'}
-                          className={active ? 'bg-white/15 text-white hover:bg-white/15' : ''}
+                          className={active ? 'bg-blue-700 text-white hover:bg-blue-800' : ''}
                         >
                           {item.active ? '启用' : '停用'}
                         </Badge>
@@ -105,7 +112,7 @@ export default function ProductManagerCategoryModal({
                     )
                   })
                 ) : (
-                  <div className="rounded-[18px] border border-white/10 bg-white/6 px-4 py-6 text-sm text-zinc-500">
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
                     还没有类型字典。
                   </div>
                 )}
@@ -113,42 +120,42 @@ export default function ProductManagerCategoryModal({
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-white">新增类型</div>
-                    <div className="mt-1 text-xs text-zinc-500">快速添加一个新分类</div>
+                    <div className="text-sm font-semibold text-gray-900">新增类型</div>
+                    <div className="mt-1 text-xs text-gray-500">快速添加一个新分类</div>
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-[1fr_120px_auto]">
+                <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
                   <Input
                     value={newCategoryName}
                     onChange={(event) => setNewCategoryName(event.target.value)}
                     placeholder="输入新类型名称"
+                    className="border-gray-300 bg-white text-gray-900 rounded-lg focus:border-blue-500 focus:ring-blue-500/20"
                   />
-                  <Input
-                    type="number"
-                    value={newCategorySort}
-                    onChange={(event) => setNewCategorySort(event.target.value)}
-                    placeholder="排序"
-                  />
-                  <Button onClick={onCreateCategory}>新增类型</Button>
+                  <Button
+                    onClick={onCreateCategory}
+                    className="bg-blue-700 hover:bg-blue-800 text-white rounded-lg border-0 transition-colors"
+                  >
+                    新增类型
+                  </Button>
                 </div>
               </div>
 
-              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4 shadow-sm">
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-white">编辑当前类型</div>
-                    <div className="mt-1 text-xs text-zinc-500">修改名称、排序或启停状态</div>
+                    <div className="text-sm font-semibold text-gray-900">编辑当前类型</div>
+                    <div className="mt-1 text-xs text-gray-500">修改名称、排序或启停状态</div>
                   </div>
-                  {selectedCategory ? <Badge variant="outline">Selected</Badge> : null}
+                  {selectedCategory ? <Badge variant="outline" className="border-gray-200 text-gray-700 bg-white">Selected</Badge> : null}
                 </div>
 
                 {selectedCategory ? (
                   <div className="mt-4 space-y-4">
-                    <div className="grid gap-3 md:grid-cols-[1fr_120px]">
+                    <div className="grid gap-3 md:grid-cols-1">
                       <Input
                         value={selectedDraft?.name || ''}
                         onChange={(event) =>
@@ -158,42 +165,44 @@ export default function ProductManagerCategoryModal({
                           }))
                         }
                         placeholder="类型名称"
-                      />
-                      <Input
-                        type="number"
-                        value={selectedDraft?.sort_order ?? 0}
-                        onChange={(event) =>
-                          setCategoryDrafts((current) => ({
-                            ...current,
-                            [selectedCategory.id]: { ...selectedDraft, sort_order: event.target.value },
-                          }))
-                        }
-                        placeholder="排序"
+                        className="border-gray-300 bg-white text-gray-900 rounded-lg focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Badge variant={selectedCategory.active ? 'default' : 'secondary'}>
                           {selectedCategory.active ? '启用' : '停用'}
                         </Badge>
-                        <span className="text-sm text-zinc-300">{selectedCategory.name}</span>
+                        <span className="text-sm text-gray-700">{selectedCategory.name}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <Button
-                          variant="secondary"
+                          variant="destructive"
+                          onClick={() => onDeleteCategory(selectedCategory)}
+                          className="border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg transition-colors"
+                        >
+                          删除
+                        </Button>
+                        <Button
+                          variant="outline"
                           onClick={() => onToggleCategory({ ...selectedCategory, active: selectedCategory.active })}
-                          className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10"
+                          className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                         >
                           {selectedCategory.active ? '停用' : '启用'}
                         </Button>
-                        <Button onClick={() => onUpdateCategory(selectedCategory)}>保存更改</Button>
+                        <Button
+                          onClick={() => onUpdateCategory(selectedCategory)}
+                          className="bg-blue-700 hover:bg-blue-800 text-white rounded-lg border-0 transition-colors"
+                        >
+                          保存更改
+                        </Button>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-4 rounded-[18px] border border-dashed border-white/10 bg-white/5 px-4 py-8 text-sm text-zinc-500">
+                  <div className="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-sm text-gray-500">
                     先从左侧选择一个分类。
                   </div>
                 )}

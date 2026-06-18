@@ -94,16 +94,16 @@ const AiChatWidget = () => {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
-        <div className="mb-4 flex h-[500px] w-[380px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 animate-in slide-in-from-bottom-5 duration-300">
+        <div className="mb-4 flex h-[500px] w-[380px] flex-col overflow-hidden rounded-xl bg-white border border-gray-200 shadow-xl text-gray-900 transition-shadow duration-150">
           {/* Header */}
-          <div className="flex items-center justify-between bg-black p-4 text-white">
+          <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 p-4 text-gray-900">
             <div className="flex items-center gap-2">
-              <Bot size={20} className="text-white" />
+              <Bot size={20} className="text-blue-700" />
               <span className="font-semibold">GiftCraft AI 客服</span>
             </div>
             <button 
               onClick={() => setIsOpen(false)}
-              className="rounded-full p-1 hover:bg-white/20 transition-colors"
+              className="rounded-md p-1 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors"
             >
               <X size={20} />
             </button>
@@ -124,15 +124,15 @@ const AiChatWidget = () => {
               >
                 <div className={cn(
                   "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow-sm",
-                  msg.role === 'user' ? "bg-white" : "bg-black text-white"
+                  msg.role === 'user' ? "bg-gray-100 border-gray-200 text-gray-600" : "bg-blue-50 border-blue-100 text-blue-700"
                 )}>
                   {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                 </div>
                 <div className={cn(
-                  "rounded-2xl px-4 py-2 text-sm shadow-sm",
+                  "rounded-lg px-4 py-2 text-sm shadow-sm",
                   msg.role === 'user' 
-                    ? "bg-black text-white rounded-tr-none" 
-                    : "bg-white text-gray-800 rounded-tl-none border border-gray-100"
+                    ? "bg-blue-700 text-white rounded-tr-none" 
+                    : "bg-gray-100 text-gray-800 rounded-tl-none border border-gray-200"
                 )}>
                   {msg.content || (isLoading && i === messages.length - 1 ? '...' : '')}
                 </div>
@@ -141,20 +141,20 @@ const AiChatWidget = () => {
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSend} className="border-t p-4 bg-white">
+          <form onSubmit={handleSend} className="border-t border-gray-200 p-4 bg-white">
             <div className="relative flex items-center">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="输入您的问题..."
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-12 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black transition-all"
+                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 pr-12 text-sm text-gray-900 focus:border-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-700 transition-colors"
                 disabled={isLoading}
               />
               <button
                 type="submit"
                 disabled={!input.trim() || isLoading}
-                className="absolute right-2 rounded-lg bg-black p-1.5 text-white transition-all hover:scale-105 active:scale-95 disabled:bg-gray-300 disabled:scale-100"
+                className="absolute right-2 rounded-md bg-blue-700 p-1.5 text-white transition-colors hover:bg-blue-800 disabled:bg-gray-200 disabled:text-gray-400"
               >
                 <Send size={16} />
               </button>
@@ -166,12 +166,9 @@ const AiChatWidget = () => {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "flex h-14 w-14 items-center justify-center rounded-full bg-black text-white shadow-xl transition-all hover:scale-110 active:scale-90",
-          isOpen ? "rotate-90" : "rotate-0"
-        )}
+        className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-700 text-white shadow-md transition-colors hover:bg-blue-800"
       >
-        {isOpen ? <X size={28} /> : <MessageCircle size={28} />}
+        {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
     </div>
   );

@@ -148,18 +148,18 @@ export default function DashboardPage({ scope = 'admin' }) {
   const ownerNameById = (ownerId) => users.find((user) => user.id === ownerId)?.username || session?.username || ownerId || '未归属'
 
   return (
-    <div className="space-y-3 text-zinc-100">
+    <div className="space-y-3 text-gray-900">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {overviewCards.map((item) => {
           const Icon = item.icon
           return (
-            <Card key={item.label} className="border-white/10 bg-white/6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+            <Card key={item.label} className="bg-white border border-gray-200 rounded-xl shadow-sm text-gray-900">
               <CardContent className="flex items-center justify-between p-4">
                 <div>
-                  <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">{item.label}</div>
-                  <div className="mt-1.5 text-2xl font-semibold tracking-[-0.03em] text-white">{item.value}</div>
+                  <div className="text-xs font-medium uppercase tracking-wider text-gray-500">{item.label}</div>
+                  <div className="mt-1.5 text-2xl font-semibold text-gray-900">{item.value}</div>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-400 text-white shadow-[0_10px_18px_rgba(129,140,248,0.24)]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
                   <Icon className="h-4.5 w-4.5" />
                 </div>
               </CardContent>
@@ -169,10 +169,10 @@ export default function DashboardPage({ scope = 'admin' }) {
       </div>
 
       <div className="grid gap-3 xl:grid-cols-3">
-        <Card className="border-white/10 bg-white/6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+        <Card className="bg-white border border-gray-200 rounded-xl shadow-sm text-gray-900">
           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
-            <CardTitle className="text-base">订单分布统计</CardTitle>
-            <Badge variant="secondary" className="gap-1">
+            <CardTitle className="text-base font-semibold text-gray-900">订单分布统计</CardTitle>
+            <Badge variant="secondary" className="gap-1 bg-gray-100 text-gray-800 hover:bg-gray-200">
               <BarChart3 className="h-3.5 w-3.5" />
               实时统计
             </Badge>
@@ -184,62 +184,62 @@ export default function DashboardPage({ scope = 'admin' }) {
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-white/6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+        <Card className="bg-white border border-gray-200 rounded-xl shadow-sm text-gray-900">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-base">业绩排行</CardTitle>
+            <CardTitle className="text-base font-semibold text-gray-900">业绩排行</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-2">
             {ranking.length ? (
               ranking.slice(0, 4).map((item, index) => (
-                <div key={item.username} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
+                <div key={item.username} className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
                   <div>
-                    <div className="font-medium text-white">
+                    <div className="font-medium text-gray-900">
                       {index + 1}. {item.username}
                     </div>
-                    <div className="text-xs text-zinc-500">订单数 {item.order_count}</div>
+                    <div className="text-xs text-gray-500">订单数 {item.order_count}</div>
                   </div>
-                  <div className="text-xs font-semibold text-white">{formatCurrency(item.sales_total)}</div>
+                  <div className="text-xs font-semibold text-gray-900">{formatCurrency(item.sales_total)}</div>
                 </div>
               ))
             ) : (
-              <div className="text-sm text-zinc-500">暂无业绩数据</div>
+              <div className="text-sm text-gray-500">暂无业绩数据</div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-white/6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+        <Card className="bg-white border border-gray-200 rounded-xl shadow-sm text-gray-900">
           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
-            <CardTitle className="text-base">动态近 7 天趋势</CardTitle>
-            <Badge variant="secondary">滚动日期</Badge>
+            <CardTitle className="text-base font-semibold text-gray-900">动态近 7 天趋势</CardTitle>
+            <Badge variant="secondary" className="bg-gray-100 text-gray-800 hover:bg-gray-200">滚动日期</Badge>
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-2">
             {rollingDailyTrend.length ? (
               rollingDailyTrend.map((item) => <TrendBar key={item.label} label={item.label} value={item.orders} sales={item.sales_total} />)
             ) : (
-              <div className="text-sm text-zinc-500">暂无趋势数据</div>
+              <div className="text-sm text-gray-500">暂无趋势数据</div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-white/6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+        <Card className="bg-white border border-gray-200 rounded-xl shadow-sm text-gray-900">
           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
-            <CardTitle className="text-base">本月销量折线图</CardTitle>
-            <Badge variant="secondary">金额</Badge>
+            <CardTitle className="text-base font-semibold text-gray-900">本月销量折线图</CardTitle>
+            <Badge variant="secondary" className="bg-gray-100 text-gray-800 hover:bg-gray-200">金额</Badge>
           </CardHeader>
           <CardContent className="p-4 pt-2">
             <MonthlySalesChart points={monthlySalesTrend} peak={monthlySalesPeak} total={monthlySalesTotal} />
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-white/6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
+        <Card className="bg-white border border-gray-200 rounded-xl shadow-sm text-gray-900">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-base">客户归属分布</CardTitle>
+            <CardTitle className="text-base font-semibold text-gray-900">客户归属分布</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-2">
             {customerSummary.owner_distribution.length ? (
               customerSummary.owner_distribution.map((item) => <PanelItem key={item.username} label={item.username} value={item.count} />)
             ) : (
-              <div className="text-sm text-zinc-500">暂无归属数据</div>
+              <div className="text-sm text-gray-500">暂无归属数据</div>
             )}
           </CardContent>
         </Card>
@@ -250,9 +250,9 @@ export default function DashboardPage({ scope = 'admin' }) {
 
 function PanelItem({ label, value }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
-      <span className="text-xs text-zinc-400">{label}</span>
-      <span className="text-base font-semibold text-white">{value}</span>
+    <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className="text-base font-semibold text-gray-900">{value}</span>
     </div>
   )
 }
@@ -263,13 +263,13 @@ function TrendBar({ label, value, sales }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-zinc-300">{label}</span>
-        <span className="text-zinc-500">
+        <span className="font-medium text-gray-700">{label}</span>
+        <span className="text-gray-500">
           {value} 单 · {formatCurrency(sales)}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-white/10">
-        <div className="h-2 rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400 transition-all" style={{ width: `${width}%` }} />
+      <div className="h-2 rounded-lg bg-gray-100">
+        <div className="h-2 rounded-lg bg-blue-600 transition-all" style={{ width: `${width}%` }} />
       </div>
     </div>
   )
@@ -298,23 +298,22 @@ function MonthlySalesChart({ points, peak, total }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">本月累计销售额</div>
-          <div className="mt-1 text-xl font-semibold text-white">{formatCurrency(total)}</div>
+          <div className="text-xs uppercase tracking-wider text-gray-500">本月累计销售额</div>
+          <div className="mt-1 text-xl font-semibold text-gray-900">{formatCurrency(total)}</div>
         </div>
-        <div className="text-xs text-zinc-500">横坐标：本月日期</div>
+        <div className="text-xs text-gray-500">横坐标：本月日期</div>
       </div>
 
-      <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5 p-3">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-3">
         <svg viewBox={`0 0 ${width} ${height}`} className="h-[240px] w-full">
           <defs>
             <linearGradient id="salesGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#6366f1" />
-              <stop offset="55%" stopColor="#8b5cf6" />
-              <stop offset="100%" stopColor="#38bdf8" />
+              <stop offset="0%" stopColor="#1a56db" />
+              <stop offset="100%" stopColor="#1e40af" />
             </linearGradient>
             <linearGradient id="salesFill" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="rgba(99,102,241,0.35)" />
-              <stop offset="100%" stopColor="rgba(56,189,248,0.02)" />
+              <stop offset="0%" stopColor="rgba(26,86,219,0.15)" />
+              <stop offset="100%" stopColor="rgba(26,86,219,0.01)" />
             </linearGradient>
           </defs>
 
@@ -323,8 +322,8 @@ function MonthlySalesChart({ points, peak, total }) {
             const value = maxValue * ratio
             return (
               <g key={ratio}>
-                <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 6" />
-                <text x={8} y={y + 4} fill="rgba(161,161,170,0.8)" fontSize="10">
+                <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="#e5e7eb" strokeDasharray="4 6" />
+                <text x={8} y={y + 4} fill="#6b7280" fontSize="10">
                   {formatCurrency(value)}
                 </text>
               </g>
@@ -348,9 +347,9 @@ function MonthlySalesChart({ points, peak, total }) {
             const showLabel = index === 0 || index === scaledPoints.length - 1 || (index + 1) % 5 === 0
             return (
               <g key={point.label}>
-                <circle cx={point.x} cy={point.y} r="4.5" fill="url(#salesGradient)" />
+                <circle cx={point.x} cy={point.y} r="4.5" fill="#1a56db" />
                 {showLabel ? (
-                  <text x={point.x} y={height - 8} textAnchor="middle" fill="rgba(161,161,170,0.85)" fontSize="10">
+                  <text x={point.x} y={height - 8} textAnchor="middle" fill="#6b7280" fontSize="10">
                     {point.label}
                   </text>
                 ) : null}

@@ -22,11 +22,11 @@ const EMPTY_CHECKOUT_FORM = {
 }
 
 const SUMMARY_BUTTON_BASE =
-  'h-11 w-full rounded-full px-4 text-sm font-semibold transition'
+  'h-11 w-full rounded-lg px-4 text-sm font-semibold transition'
 const SUMMARY_BUTTON_PRIMARY =
-  `${SUMMARY_BUTTON_BASE} bg-[var(--primary)] text-[var(--on-primary)] hover:bg-[var(--primary-dim)]`
+  `${SUMMARY_BUTTON_BASE} bg-blue-700 text-white hover:bg-blue-800`
 const SUMMARY_BUTTON_DANGER =
-  `${SUMMARY_BUTTON_BASE} border border-[var(--outline-variant)]/35 bg-[var(--surface-container-low)] text-[var(--on-surface-variant)] hover:border-rose-300 hover:text-rose-600`
+  `${SUMMARY_BUTTON_BASE} border border-gray-200 bg-white text-gray-700 hover:border-red-200 hover:text-red-750`
 
 export default function CartPage() {
   const navigate = useNavigate()
@@ -200,20 +200,20 @@ export default function CartPage() {
         <div className="flex-shrink-0">
           <button
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--outline-variant)]/30 bg-[var(--surface-container-lowest)] px-4 py-2 text-sm font-medium text-[var(--on-surface)] transition hover:border-[var(--primary)]/30 hover:text-[var(--primary)]"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-blue-700 hover:text-blue-700"
           >
             <ArrowLeft className="h-4 w-4" />
             返回上一页
           </button>
         </div>
 
-        <div className="rounded-3xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] p-12 text-center shadow-sm">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--surface-container)] text-[var(--on-surface)]">
+        <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-lg bg-gray-100 text-gray-700">
             <ShoppingCart className="h-6 w-6" />
           </div>
-          <h1 className="mt-5 text-2xl font-semibold text-[var(--on-surface)]">购物车是空的</h1>
-          <p className="mt-2 text-sm text-[var(--on-surface-variant)]">去选品页挑选一些商品吧。</p>
-          <Button asChild className="mt-6 rounded-full bg-[var(--primary)] text-[var(--on-primary)] hover:bg-[var(--primary-dim)]">
+          <h1 className="mt-5 text-2xl font-semibold text-gray-900">购物车是空的</h1>
+          <p className="mt-2 text-sm text-gray-500">去选品页挑选一些商品吧。</p>
+          <Button asChild className="mt-6 rounded-lg bg-blue-700 text-white hover:bg-blue-800">
             <Link to="/catalog">去选品</Link>
           </Button>
         </div>
@@ -226,7 +226,7 @@ export default function CartPage() {
       <div className="mb-6">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 rounded-full border border-[var(--outline-variant)]/30 bg-[var(--surface-container-lowest)] px-4 py-2 text-sm font-medium text-[var(--on-surface)] transition hover:border-[var(--primary)]/30 hover:text-[var(--primary)]"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-blue-700 hover:text-blue-700"
         >
           <ArrowLeft className="h-4 w-4" />
           返回上一页
@@ -237,13 +237,13 @@ export default function CartPage() {
           {cartItems.map((item) => (
             <div
               key={item.id}
-              className="overflow-hidden rounded-3xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] shadow-sm"
+              className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
             >
               <div className="flex gap-4 p-4 sm:p-5">
-                <img src={item.image_url} alt={item.name} className="h-28 w-28 rounded-[24px] object-cover" />
+                <img src={item.image_url} alt={item.name} className="h-28 w-28 rounded-lg object-cover" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-lg font-semibold text-[var(--on-surface)]">{item.name}</div>
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--on-surface-variant)]">{item.description}</p>
+                  <div className="text-lg font-semibold text-gray-900">{item.name}</div>
+                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-500">{item.description}</p>
                   <div className="mt-4 flex items-center gap-2">
                     <CartQuantityControl
                       quantity={item.quantity}
@@ -252,14 +252,14 @@ export default function CartPage() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end justify-between">
-                  <div className="text-right text-lg font-semibold text-[var(--on-surface)]">{formatCurrency(item.subtotal)}</div>
+                  <div className="text-right text-lg font-semibold text-gray-900">{formatCurrency(item.subtotal)}</div>
                   <button
                     type="button"
                     onClick={() => {
                       setPendingItem(item)
                       setRemoveOpen(true)
                     }}
-                    className="inline-flex items-center gap-2 text-sm text-rose-600 transition hover:text-rose-700"
+                    className="inline-flex items-center gap-2 text-sm text-red-600 transition hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />
                     移除
@@ -270,8 +270,8 @@ export default function CartPage() {
           ))}
         </div>
 
-        <div className="rounded-3xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] p-6 shadow-sm lg:sticky lg:top-24">
-          <div className="text-sm font-medium uppercase tracking-[0.18em] text-[var(--on-surface-variant)]">订单汇总</div>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+          <div className="text-sm font-medium uppercase tracking-[0.18em] text-gray-500">订单汇总</div>
           <div className="mt-5 space-y-3">
             <SummaryRow label="商品种类" value={cartCount} />
             <SummaryRow label="采购总量" value={cartItems.reduce((sum, item) => sum + item.quantity, 0)} />
@@ -328,16 +328,16 @@ export default function CartPage() {
       />
 
       <Modal open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <ModalContent className="max-w-4xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] text-[var(--on-surface)] shadow-[0_40px_120px_rgba(15,23,42,0.22)]">
-          <ModalHeader className="border-b border-[var(--outline-variant)]/25 bg-[var(--surface-container-low)] px-6 py-5">
-            <div className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--on-surface-variant)]">聚合表单</div>
-            <div className="mt-1 text-2xl font-semibold tracking-[-0.03em]">创建客户和订单</div>
+        <ModalContent className="max-w-4xl border border-gray-200 bg-white text-gray-900 shadow-xl rounded-xl">
+          <ModalHeader className="border-b border-gray-200 bg-gray-50 px-6 py-5">
+            <div className="text-xs font-medium uppercase tracking-wider text-gray-500">聚合表单</div>
+            <div className="mt-1 text-2xl font-semibold tracking-tight">创建客户和订单</div>
           </ModalHeader>
 
-          <ModalBody className="max-h-[78vh] overflow-y-auto bg-[var(--surface-container-lowest)] px-6 py-6">
+          <ModalBody className="max-h-[78vh] overflow-y-auto bg-white px-6 py-6">
             <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
               <section className="space-y-4">
-                <div className="text-sm font-semibold text-[var(--on-surface)]">客户信息</div>
+                <div className="text-sm font-semibold text-gray-900">客户信息</div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Input
                     value={checkoutForm.company_name}
@@ -371,9 +371,9 @@ export default function CartPage() {
                       disabled={loadingUsers && !ownerQuery.trim()}
                       className="pr-10"
                     />
-                    <ChevronDown className="pointer-events-none absolute right-4 top-3.5 h-4 w-4 text-[var(--on-surface-variant)]" />
+                    <ChevronDown className="pointer-events-none absolute right-4 top-3.5 h-4 w-4 text-gray-500" />
                     {ownerDropdownOpen && filteredOwnerOptions.length ? (
-                      <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 overflow-hidden rounded-2xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] shadow-[0_18px_50px_rgba(15,23,42,0.16)]">
+                      <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
                         {filteredOwnerOptions.map((item) => (
                           <button
                             key={item.id || item.value}
@@ -384,15 +384,15 @@ export default function CartPage() {
                               setOwnerQuery(item.value)
                               setOwnerDropdownOpen(false)
                             }}
-                            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-[var(--on-surface)] transition hover:bg-[var(--surface-container-low)]"
+                            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-gray-700 transition hover:bg-gray-50"
                           >
                             <span>{item.label}</span>
-                            {checkoutForm.owner_username === item.value ? <Check className="h-4 w-4 text-[var(--primary)]" /> : null}
+                            {checkoutForm.owner_username === item.value ? <Check className="h-4 w-4 text-blue-700" /> : null}
                           </button>
                         ))}
                       </div>
                     ) : null}
-                    <div className="text-xs text-[var(--on-surface-variant)]">
+                    <div className="text-xs text-gray-500">
                       {session ? '输入 username 搜索并选择订单 owner。' : '未登录也可以下单，只需检索并选择 owner username。'}
                     </div>
                   </div>
@@ -410,20 +410,20 @@ export default function CartPage() {
               </section>
 
               <section className="space-y-4">
-                <div className="text-sm font-semibold text-[var(--on-surface)]">订单预览</div>
-                <div className="rounded-3xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-low)] p-4">
+                <div className="text-sm font-semibold text-gray-900">订单预览</div>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <div className="space-y-3">
                     {cartItems.map((item) => (
                       <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
                         <div className="min-w-0">
-                          <div className="truncate font-medium text-[var(--on-surface)]">{item.name}</div>
-                          <div className="text-xs text-[var(--on-surface-variant)]">x {item.quantity}</div>
+                          <div className="truncate font-medium text-gray-900">{item.name}</div>
+                          <div className="text-xs text-gray-500">x {item.quantity}</div>
                         </div>
-                        <div className="font-medium text-[var(--on-surface)]">{formatCurrency(item.subtotal)}</div>
+                        <div className="font-medium text-gray-900">{formatCurrency(item.subtotal)}</div>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 border-t border-[var(--outline-variant)]/25 pt-4">
+                  <div className="mt-4 border-t border-gray-200 pt-4">
                     <SummaryRow label="总计" value={formatCurrency(cartTotal)} />
                   </div>
                 </div>
@@ -431,16 +431,16 @@ export default function CartPage() {
             </div>
           </ModalBody>
 
-          <ModalFooter className="flex flex-col gap-3 border-t border-[var(--outline-variant)]/25 bg-[var(--surface-container-low)] px-6 py-5 sm:flex-row sm:justify-end">
+          <ModalFooter className="flex flex-col gap-3 border-t border-gray-200 bg-gray-50 px-6 py-5 sm:flex-row sm:justify-end">
             <Button
               variant="secondary"
-              className="h-11 rounded-full border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] px-5 text-sm font-semibold text-[var(--on-surface)] hover:border-[var(--primary)]/35 hover:text-[var(--primary)]"
+              className="h-10 rounded-lg border border-gray-300 bg-white px-5 text-sm font-medium text-gray-700 hover:bg-gray-50"
               onClick={() => setCheckoutOpen(false)}
             >
               取消
             </Button>
             <Button
-              className="h-11 rounded-full bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--on-primary)] hover:bg-[var(--primary-dim)]"
+              className="h-10 rounded-lg bg-blue-700 px-5 text-sm font-medium text-white hover:bg-blue-800"
               onClick={submitCheckout}
               disabled={submitting}
             >
@@ -498,7 +498,7 @@ function CartQuantityControl({ quantity, onCommit }) {
   }
 
   return (
-    <div className="inline-flex h-7 items-center rounded-full border border-[var(--outline-variant)]/35 bg-[var(--surface-container-low)] p-0.5">
+    <div className="inline-flex h-8 items-center rounded-lg border border-gray-300 bg-gray-50 p-1">
       <button
         type="button"
         onClick={() => {
@@ -507,10 +507,10 @@ function CartQuantityControl({ quantity, onCommit }) {
           setIsEditing(true)
           scheduleCommit(nextQuantity)
         }}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--on-surface-variant)] transition hover:bg-[var(--surface-container)] hover:text-[var(--on-surface)]"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-500 transition hover:bg-white hover:text-gray-900 hover:shadow-sm"
         aria-label="减少数量"
       >
-        <Minus className="h-2.5 w-2.5" />
+        <Minus className="h-3 w-3" />
       </button>
       <input
         value={draft}
@@ -528,7 +528,7 @@ function CartQuantityControl({ quantity, onCommit }) {
         }}
         inputMode="numeric"
         pattern="[0-9]*"
-        className="h-6 w-11 border-0 bg-transparent px-1 text-center text-xs font-semibold text-[var(--on-surface)] outline-none"
+        className="h-6 w-11 border-0 bg-transparent px-1 text-center text-xs font-semibold text-gray-900 outline-none"
         aria-label="数量"
         title="可直接输入数量"
       />
@@ -540,10 +540,10 @@ function CartQuantityControl({ quantity, onCommit }) {
           setIsEditing(true)
           scheduleCommit(nextQuantity)
         }}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--on-surface-variant)] transition hover:bg-[var(--surface-container)] hover:text-[var(--on-surface)]"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-500 transition hover:bg-white hover:text-gray-900 hover:shadow-sm"
         aria-label="增加数量"
       >
-        <Plus className="h-2.5 w-2.5" />
+        <Plus className="h-3 w-3" />
       </button>
     </div>
   )
@@ -552,8 +552,8 @@ function CartQuantityControl({ quantity, onCommit }) {
 function SummaryRow({ label, value }) {
   return (
     <div className="flex items-center justify-between text-sm">
-      <span className="text-[var(--on-surface-variant)]">{label}</span>
-      <span className="font-medium text-[var(--on-surface)]">{value}</span>
+      <span className="text-gray-500">{label}</span>
+      <span className="font-medium text-gray-900">{value}</span>
     </div>
   )
 }

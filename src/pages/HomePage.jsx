@@ -3,6 +3,7 @@ import { Hero } from '../components/home/Hero';
 import { FeaturedCollections } from '../components/home/FeaturedCollections';
 import { CustomizerCTA } from '../components/home/CustomizerCTA';
 import { Testimonials } from '../components/home/Testimonials';
+import { Footer } from '../components/home/Footer';
 import { MobileNav } from '../components/home/MobileNav';
 
 // Local Assets
@@ -31,15 +32,17 @@ export default function HomePage() {
   };
 
   return (
-    <div className="home-page-theme min-h-screen">
+    <div className="home-page-theme min-h-screen bg-gray-50">
       <Navigation />
-      <main className="pt-24 pb-32">
+      <main className="pt-24 pb-16">
         <Hero heroImage={images.hero} />
         <FeaturedCollections images={images.collections} />
         <CustomizerCTA />
         <Testimonials testimonialImages={images.testimonials} />
       </main>
+      <Footer />
       <MobileNav />
     </div>
   );
 }
+

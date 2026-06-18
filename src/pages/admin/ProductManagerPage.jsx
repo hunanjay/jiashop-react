@@ -186,6 +186,14 @@ export default function ProductManagerPage({ scope = 'admin' }) {
     setCategoryConfirmOpen(true)
   }
 
+  const requestDeleteCategory = (category) => {
+    setCategoryPendingAction({
+      type: 'delete',
+      category,
+    })
+    setCategoryConfirmOpen(true)
+  }
+
   const applyCategoryAction = async () => {
     if (!categoryPendingAction) return
     setCategorySaving(true)
@@ -203,6 +211,9 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       } else if (categoryPendingAction.type === 'toggle') {
         await api.patch(`/admin/product-categories/${categoryPendingAction.category.id}`, categoryPendingAction.payload)
         pushToast('success', categoryPendingAction.payload.active ? '类型已启用' : '类型已停用')
+      } else if (categoryPendingAction.type === 'delete') {
+        await api.delete(`/admin/product-categories/${categoryPendingAction.category.id}`)
+        pushToast('success', '类型已删除')
       }
 
       await refreshCategoryCatalog()
@@ -262,6 +273,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
           onCreateCategory={requestCreateCategory}
           onUpdateCategory={requestUpdateCategory}
           onToggleCategory={requestToggleCategory}
+          onDeleteCategory={requestDeleteCategory}
         />
       ) : null}
 
@@ -305,17 +317,22 @@ export default function ProductManagerPage({ scope = 'admin' }) {
               ? categoryPendingAction?.payload?.active
                 ? '确认启用类型'
                 : '确认停用类型'
-              : '确认更新类型'
+              : categoryPendingAction?.type === 'delete'
+                ? '确认删除类型'
+                : '确认更新类型'
         }
         description={
           categoryPendingAction?.type === 'create'
             ? `你正在新增类型「${categoryPendingAction?.payload?.name || ''}」，确认后将立即生效。`
             : categoryPendingAction?.type === 'toggle'
               ? `你正在${categoryPendingAction?.payload?.active ? '启用' : '停用'}类型「${categoryPendingAction?.category?.name || ''}」。`
-              : `你正在更新类型「${categoryPendingAction?.category?.name || ''}」，确认后会立即保存。`
+              : categoryPendingAction?.type === 'delete'
+                ? `你正在删除类型「${categoryPendingAction?.category?.name || ''}」，确认后将立即删除该类型，属于该类型的商品分类将被置空。`
+                : `你正在更新类型「${categoryPendingAction?.category?.name || ''}」，确认后会立即保存。`
         }
         confirmLabel="确认提交"
         cancelLabel="返回编辑"
+        destructive={categoryPendingAction?.type === 'delete'}
         loading={categorySaving}
         onOpenChange={(open) => {
           setCategoryConfirmOpen(open)

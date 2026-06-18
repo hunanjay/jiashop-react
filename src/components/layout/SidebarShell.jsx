@@ -17,20 +17,20 @@ export default function SidebarShell({
 }) {
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 hidden border-r border-white/80 bg-white/72 backdrop-blur-2xl transition-all duration-300 lg:flex ${
+      className={`fixed inset-y-0 left-0 z-40 hidden border-r border-gray-200 bg-white transition-all duration-300 lg:flex ${
         collapsed ? 'lg:w-[92px]' : 'lg:w-[292px]'
       }`}
     >
       <div className="flex w-full flex-col">
-        <div className="flex items-center justify-between gap-3 border-b border-white/70 px-5 py-5">
+        <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-5">
           <Link to={links[0]?.to || '/'} className="flex items-center gap-3 overflow-hidden">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-400 text-white shadow-[0_16px_30px_rgba(129,140,248,0.28)]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-700 text-white shadow-sm">
               {Icon ? <Icon className="h-5 w-5" /> : null}
             </div>
             {!collapsed ? (
               <div>
-                <div className="text-sm font-semibold tracking-[0.18em] text-slate-500 uppercase">{title}</div>
-                <div className="text-lg font-semibold tracking-[-0.03em] text-slate-950">{subtitle}</div>
+                <div className="text-sm font-semibold tracking-[0.18em] text-gray-500 uppercase">{title}</div>
+                <div className="text-lg font-semibold text-gray-900">{subtitle}</div>
               </div>
             ) : null}
           </Link>
@@ -57,10 +57,10 @@ export default function SidebarShell({
                 end={item.to === activePrefix}
                 className={({ isActive }) =>
                   [
-                    'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition',
+                    'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors duration-150',
                     isActive
-                      ? 'bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-500 text-white shadow-[0_16px_30px_rgba(129,140,248,0.24)]'
-                      : 'text-slate-700 hover:bg-white/80',
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-100',
                   ].join(' ')
                 }
               >
@@ -74,11 +74,11 @@ export default function SidebarShell({
         {children}
 
         {account ? (
-          <div className="border-t border-white/70 p-4">
-            <div className="rounded-[24px] bg-white/75 p-4 shadow-sm backdrop-blur-xl">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">当前账号</div>
-              <div className="mt-2 text-sm font-semibold text-slate-950">{account.username}</div>
-              <div className="mt-1 text-xs text-slate-500">{account.role}</div>
+          <div className="border-t border-gray-200 p-4">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">当前账号</div>
+              <div className="mt-2 text-sm font-semibold text-gray-900">{account.username}</div>
+              <div className="mt-1 text-xs text-gray-500">{account.role}</div>
             </div>
           </div>
         ) : null}

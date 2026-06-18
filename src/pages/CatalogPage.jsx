@@ -15,7 +15,7 @@ const PRICE_FILTERS = [
 ]
 
 export default function CatalogPage() {
-  const { products, loadingProducts, catalogQuery } = useApp()
+  const { products, loadingProducts, catalogQuery, setCatalogQuery } = useApp()
   const [activeCategory, setActiveCategory] = useState('all')
   const [brandQuery, setBrandQuery] = useState('')
   const [priceFilter, setPriceFilter] = useState('all')
@@ -80,55 +80,75 @@ export default function CatalogPage() {
     setActiveCategory('all')
     setBrandQuery('')
     setPriceFilter('all')
+    setCatalogQuery('')
   }
 
   const removeFilter = (type) => {
     if (type === 'category') setActiveCategory('all')
     if (type === 'brand') setBrandQuery('')
     if (type === 'price') setPriceFilter('all')
+    if (type === 'globalSearch') setCatalogQuery('')
   }
 
   return (
-    <div className="home-page-theme min-h-screen bg-[var(--surface)] text-[var(--on-surface)]">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       <FloatingCartButton />
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <div className="flex flex-col gap-3 rounded-3xl border border-[var(--outline-variant)]/45 bg-[var(--surface-container-lowest)] px-5 py-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--on-surface-variant)]">
+        <div className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">
               <Tag className="h-3.5 w-3.5" />
               选品中心
             </div>
-            <h1 className="text-2xl font-semibold tracking-[-0.03em] text-[var(--on-surface)] sm:text-3xl">热销精选</h1>
-            <p className="mt-1 text-sm text-[var(--on-surface-variant)]">从畅销商品中挑选，进入详情继续定制。</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">热销精选</h1>
+            <p className="mt-1 text-sm text-gray-500">从畅销商品中挑选，进入详情继续定制。</p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--outline-variant)]/40 bg-[var(--surface-container-low)] px-4 py-2.5 text-sm text-[var(--on-surface-variant)]">
+          <div className="flex flex-wrap items-center gap-3 md:justify-end">
+            <div className="relative min-w-[260px] sm:w-[320px]">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                value={catalogQuery}
+                onChange={(event) => setCatalogQuery(event.target.value)}
+                placeholder="搜索商品名称、描述或分类"
+                className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              />
+              {catalogQuery && (
+                <button
+                  onClick={() => setCatalogQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-500">
               <LayoutGrid className="h-4 w-4" />
               <span>{productRows.length} 件商品</span>
             </div>
             <Link
               to="/"
-              className="inline-flex items-center rounded-full border border-[var(--outline-variant)]/40 px-4 py-2.5 text-sm font-medium text-[var(--on-surface)] transition hover:border-[var(--primary)]/40 hover:text-[var(--primary)]"
+              className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:border-blue-700 hover:text-blue-700"
             >
-                返回主页
+              返回主页
             </Link>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <aside className="space-y-4 rounded-3xl border border-[var(--outline-variant)]/45 bg-[var(--surface-container-lowest)] p-5 shadow-sm">
+          <aside className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <button
               type="button"
               onClick={clearFilters}
-              className="flex w-full items-center gap-3 rounded-2xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-low)] px-4 py-3 text-left text-sm font-medium text-[var(--on-surface)] transition hover:border-[var(--primary)]/35"
+              className="flex w-full items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left text-sm font-medium text-gray-700 transition hover:border-blue-700 hover:text-blue-700"
             >
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--surface-container)] text-[var(--on-surface-variant)]">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-gray-200 text-gray-500">
                 <X className="h-3.5 w-3.5" />
               </span>
               清空筛选
               {activeFilterCount > 0 ? (
-                <span className="ml-auto rounded-full bg-[var(--primary-container)] px-2.5 py-0.5 text-xs text-[var(--on-primary-container)]">
+                <span className="ml-auto rounded-md bg-blue-50 px-2.5 py-0.5 text-xs text-blue-700 font-semibold">
                   {activeFilterCount}
                 </span>
               ) : null}
@@ -138,7 +158,8 @@ export default function CatalogPage() {
               {[
                 activeCategory !== 'all' ? { type: 'category', label: `分类: ${activeCategory}` } : null,
                 priceFilter !== 'all' ? { type: 'price', label: `价格: ${PRICE_FILTERS.find((item) => item.value === priceFilter)?.label}` } : null,
-                brandQuery.trim() ? { type: 'brand', label: `搜索: ${brandQuery.trim()}` } : null,
+                brandQuery.trim() ? { type: 'brand', label: `分类搜索: ${brandQuery.trim()}` } : null,
+                catalogQuery.trim() ? { type: 'globalSearch', label: `关键词: ${catalogQuery.trim()}` } : null,
               ]
                 .filter(Boolean)
                 .map((chip) => (
@@ -146,7 +167,7 @@ export default function CatalogPage() {
                     key={chip.label}
                     type="button"
                     onClick={() => removeFilter(chip.type)}
-                    className="inline-flex items-center gap-2 rounded-full border border-[var(--outline-variant)]/35 bg-[var(--surface-container-low)] px-3 py-2 text-xs text-[var(--on-surface-variant)] transition hover:border-[var(--primary)]/35"
+                    className="inline-flex items-center gap-2 rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700 transition hover:bg-blue-100"
                   >
                     {chip.label}
                     <X className="h-3 w-3" />
@@ -154,17 +175,17 @@ export default function CatalogPage() {
                 ))}
             </div>
 
-            <div className="rounded-2xl border border-[var(--outline-variant)]/40 bg-[var(--surface-container-low)] p-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <button
                 type="button"
                 onClick={() => setPriceOpen((current) => !current)}
                 className="flex w-full items-center justify-between gap-3 text-left"
               >
-                <span className="text-sm font-semibold text-[var(--on-surface)]">价格</span>
+                <span className="text-sm font-semibold text-gray-900">价格</span>
                 {priceOpen ? (
-                  <ChevronUp className="h-4 w-4 text-[var(--on-surface-variant)]" />
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
                 ) : (
-                  <ChevronDown className="h-4 w-4 text-[var(--on-surface-variant)]" />
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
                 )}
               </button>
 
@@ -176,10 +197,10 @@ export default function CatalogPage() {
                       type="button"
                       onClick={() => setPriceFilter(item.value)}
                       className={[
-                        'rounded-2xl border px-4 py-3 text-left text-sm transition',
+                        'rounded-lg border px-4 py-3 text-left text-sm transition',
                         priceFilter === item.value
-                          ? 'border-[var(--primary)]/35 bg-[var(--primary-container)] text-[var(--on-primary-container)]'
-                          : 'border-[var(--outline-variant)]/40 bg-[var(--surface-container-lowest)] text-[var(--on-surface-variant)] hover:border-[var(--primary)]/30',
+                          ? 'border-blue-700 bg-blue-50 text-blue-700 font-medium'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50',
                       ].join(' ')}
                     >
                       {item.label}
@@ -189,29 +210,29 @@ export default function CatalogPage() {
               ) : null}
             </div>
 
-            <div className="rounded-2xl border border-[var(--outline-variant)]/40 bg-[var(--surface-container-low)] p-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <button
                 type="button"
                 onClick={() => setCategoryOpen((current) => !current)}
                 className="flex w-full items-center justify-between gap-3 text-left"
               >
-                <span className="text-sm font-semibold text-[var(--on-surface)]">分类</span>
+                <span className="text-sm font-semibold text-gray-900">分类</span>
                 {categoryOpen ? (
-                  <ChevronUp className="h-4 w-4 text-[var(--on-surface-variant)]" />
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
                 ) : (
-                  <ChevronDown className="h-4 w-4 text-[var(--on-surface-variant)]" />
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
                 )}
               </button>
 
               {categoryOpen ? (
                 <>
                   <div className="relative mt-4">
-                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--on-surface-variant)]" />
+                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
                       value={brandQuery}
                       onChange={(event) => setBrandQuery(event.target.value)}
                       placeholder="搜索分类或关键词"
-                      className="h-11 w-full rounded-2xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] pl-11 pr-4 text-sm text-[var(--on-surface)] outline-none transition placeholder:text-[var(--on-surface-variant)] focus:border-[var(--primary)]/40"
+                      className="h-11 w-full rounded-lg border border-gray-300 bg-white pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                     />
                   </div>
 
@@ -224,24 +245,24 @@ export default function CatalogPage() {
                           type="button"
                           onClick={() => setActiveCategory(item.value)}
                           className={[
-                            'flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition',
+                            'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition',
                             active
-                              ? 'border-[var(--primary)]/35 bg-[var(--primary-container)] text-[var(--on-primary-container)]'
-                              : 'border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] text-[var(--on-surface)] hover:border-[var(--primary)]/30',
+                              ? 'border-blue-700 bg-blue-50 text-blue-700 font-medium'
+                              : 'border-gray-200 bg-white text-gray-950 hover:border-gray-300 hover:bg-gray-50',
                           ].join(' ')}
                         >
                           <span
                             className={[
                               'inline-flex h-4 w-4 items-center justify-center rounded-[5px] border text-[10px]',
                               active
-                                ? 'border-[var(--primary)] bg-[var(--primary)] text-[var(--on-primary)]'
-                                : 'border-[var(--outline-variant)]/40 bg-[var(--surface-container-low)] text-transparent',
+                                ? 'border-blue-700 bg-blue-700 text-white'
+                                : 'border-gray-300 bg-gray-50 text-transparent',
                             ].join(' ')}
                           >
                             ✓
                           </span>
                           <span className="flex-1 text-sm">{item.label}</span>
-                          <span className="text-xs text-[var(--on-surface-variant)]">
+                          <span className="text-xs text-gray-500">
                             {item.value === 'all'
                               ? products.length
                               : products.filter((product) => product.category === item.value).length}
@@ -261,12 +282,12 @@ export default function CatalogPage() {
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={index}
-                    className="overflow-hidden rounded-3xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)]"
+                    className="overflow-hidden rounded-xl border border-gray-200 bg-white"
                   >
-                    <div className="animate-pulse bg-[var(--surface-container)]" style={{ aspectRatio: CARD_IMAGE_ASPECT }} />
+                    <div className="animate-pulse bg-gray-100" style={{ aspectRatio: CARD_IMAGE_ASPECT }} />
                     <div className="space-y-3 px-3 py-3">
-                      <div className="h-4 w-24 rounded-full bg-[var(--surface-container)]" />
-                      <div className="h-6 w-3/4 rounded-full bg-[var(--surface-container)]" />
+                      <div className="h-4 w-24 rounded-md bg-gray-200" />
+                      <div className="h-6 w-3/4 rounded-md bg-gray-200" />
                     </div>
                   </div>
                 ))}
@@ -278,33 +299,33 @@ export default function CatalogPage() {
                     <Link
                       key={product.id}
                       to={`/catalog/${product.id}`}
-                      className="group overflow-hidden rounded-3xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] transition duration-300 hover:-translate-y-1 hover:border-[var(--primary)]/35 hover:shadow-lg"
+                      className="group overflow-hidden rounded-xl border border-gray-200 bg-white transition duration-300 hover:border-blue-700 hover:shadow-md"
                     >
-                      <div className="overflow-hidden bg-[var(--surface-container-low)]" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
+                      <div className="overflow-hidden bg-gray-50" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
                         <img
                           src={product.image_url}
                           alt={product.name}
-                          className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                          className="h-full w-full object-cover"
                         />
                       </div>
-                      <div className="border-t border-[var(--outline-variant)]/30 px-3 py-3">
-                        <div className="truncate text-sm font-medium tracking-[-0.01em] text-[var(--on-surface)]">{product.name}</div>
+                      <div className="border-t border-gray-100 px-3 py-3">
+                        <div className="truncate text-sm font-medium tracking-tight text-gray-900">{product.name}</div>
                       </div>
                     </Link>
                   )
                 })}
               </div>
             ) : (
-              <div className="rounded-3xl border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] p-10 text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-[var(--surface-container)] text-[var(--on-surface-variant)]">
+              <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100 text-gray-400">
                   <Search className="h-6 w-6" />
                 </div>
-                <h3 className="mt-5 text-2xl font-semibold tracking-[-0.03em] text-[var(--on-surface)]">没有找到商品</h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--on-surface-variant)]">试试清空筛选，或者换一个分类和关键词。</p>
+                <h3 className="mt-5 text-2xl font-semibold tracking-tight text-gray-900">没有找到商品</h3>
+                <p className="mt-2 text-sm leading-6 text-gray-500">试试清空筛选，或者换一个分类和关键词。</p>
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="mt-6 inline-flex items-center gap-2 rounded-full border border-[var(--outline-variant)]/35 bg-[var(--surface-container-low)] px-5 py-3 text-sm font-medium text-[var(--on-surface)] transition hover:border-[var(--primary)]/35 hover:text-[var(--primary)]"
+                  className="mt-6 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-blue-700 hover:text-blue-700"
                 >
                   重置筛选
                 </button>

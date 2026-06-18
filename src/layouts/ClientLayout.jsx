@@ -79,23 +79,23 @@ export default function ClientLayout() {
   }
 
   return (
-    <div className="min-h-screen text-zinc-100">
-      {hasPreview ? <div className="fixed inset-0 z-30 bg-black/55 backdrop-blur-[2px]" onClick={() => setSearchOpen(false)} /> : null}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-black/45 backdrop-blur-2xl">
+    <div className="min-h-screen text-gray-900">
+      {hasPreview ? <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setSearchOpen(false)} /> : null}
+      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-white shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-700 text-white shadow-sm">
               <ShoppingBag className="h-5 w-5" />
             </div>
             <div className="hidden sm:block">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-400">GiftCraft</div>
-              <div className="text-lg font-semibold tracking-[-0.03em] text-white">礼品定制商店</div>
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500">GiftCraft</div>
+              <div className="text-lg font-semibold text-gray-900">礼品定制商店</div>
             </div>
           </Link>
 
           <div className="flex flex-1 items-center justify-center">
             <div className="relative w-full max-w-2xl">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <Input
                 value={catalogQuery}
                 onFocus={() => {
@@ -110,11 +110,11 @@ export default function ClientLayout() {
                 }}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="搜索礼品、分类、定制方式"
-                className="h-12 rounded-full border border-white/10 bg-white/6 pl-11 text-white shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl placeholder:text-zinc-500"
+                className="h-12 rounded-lg border border-gray-300 bg-gray-100 pl-11 text-gray-900 placeholder:text-gray-500"
               />
               {hasPreview ? (
-                <div className="absolute left-0 right-0 top-[calc(100%+12px)] z-40 overflow-hidden rounded-[28px] border border-white/10 bg-[#101014]/95 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
-                  <div className="border-b border-white/10 px-5 py-3 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+                <div className="absolute left-0 right-0 top-[calc(100%+12px)] z-40 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+                  <div className="border-b border-gray-200 px-5 py-3 text-xs font-medium uppercase tracking-[0.2em] text-gray-500">
                     {searchLoading ? '搜索中...' : '搜索预览'}
                   </div>
                   <div className="max-h-[420px] overflow-auto p-2">
@@ -129,15 +129,15 @@ export default function ClientLayout() {
                             navigate(`/catalog/${product.id}`)
                           }}
                           className={[
-                            'flex w-full items-center gap-4 rounded-3xl p-3 text-left transition',
-                            index === activeIndex ? 'bg-white/10 text-white' : 'text-zinc-200 hover:bg-white/6',
+                            'flex w-full items-center gap-4 rounded-xl p-3 text-left transition-colors duration-150',
+                            index === activeIndex ? 'bg-blue-50 text-gray-900' : 'text-gray-700 hover:bg-gray-50',
                           ].join(' ')}
                         >
-                          <img src={product.image_url} alt={product.name} className="h-16 w-16 rounded-2xl object-cover" />
+                          <img src={product.image_url} alt={product.name} className="h-16 w-16 rounded-lg object-cover" />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <div className="truncate text-sm font-semibold">{product.name}</div>
-                              <span className="rounded-full bg-white/8 px-2 py-1 text-[11px] text-zinc-400">
+                              <span className="rounded-md bg-gray-100 px-2 py-1 text-[11px] text-gray-500">
                                 {product.category || 'Uncategorized'}
                               </span>
                             </div>
@@ -147,9 +147,9 @@ export default function ClientLayout() {
                         </button>
                       ))
                     ) : searchLoading ? (
-                      <div className="p-5 text-sm text-zinc-500">正在查找匹配商品...</div>
+                      <div className="p-5 text-sm text-gray-500">正在查找匹配商品...</div>
                     ) : (
-                      <div className="p-5 text-sm text-zinc-500">没有找到匹配结果</div>
+                      <div className="p-5 text-sm text-gray-500">没有找到匹配结果</div>
                     )}
                   </div>
                 </div>
@@ -160,18 +160,18 @@ export default function ClientLayout() {
           <div className="hidden items-center gap-3 md:flex">
             <Link
               to="/cart"
-              className="relative inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 text-sm font-medium text-white shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 hover:bg-white/10"
+              className="relative inline-flex h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors duration-150 hover:bg-gray-50"
               aria-label="查看购物车"
             >
               <ShoppingCart className="h-4 w-4" />
               购物车
-              <Badge variant="default" className="ml-1 bg-cyan-400 px-2 py-0.5 text-[11px] text-slate-950">
+              <Badge variant="default" className="ml-1 bg-blue-700 px-2 py-0.5 text-[11px] text-white">
                 {cartCount}
               </Badge>
             </Link>
             <Link
               to={session ? '/admin' : '/login'}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 text-sm font-medium text-white shadow-[0_10px_30px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 hover:bg-white/14"
+              className="inline-flex h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors duration-150 hover:bg-gray-50"
             >
               <User2 className="h-4 w-4" />
               {session ? session.username : '个人中心'}
@@ -183,23 +183,23 @@ export default function ClientLayout() {
               <SheetTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/8 text-white shadow-sm"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm"
                 >
                   <Menu className="h-5 w-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="max-w-[340px] bg-[#0f0f13] text-white">
+              <SheetContent side="left" className="max-w-[340px] bg-white text-gray-900">
                 <SheetHeader>
                   <SheetTitle>导航</SheetTitle>
                 </SheetHeader>
                 <div className="space-y-3 p-5">
-                  <Link to="/" className="block rounded-2xl border border-white/10 bg-white/6 px-4 py-3 shadow-sm">
+                  <Link to="/" className="block rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 shadow-sm">
                     首页
                   </Link>
-                  <Link to="/cart" className="block rounded-2xl border border-white/10 bg-white/6 px-4 py-3 shadow-sm">
+                  <Link to="/cart" className="block rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 shadow-sm">
                     购物车
                   </Link>
-                  <Link to={session ? '/admin' : '/login'} className="block rounded-2xl border border-white/10 bg-white/6 px-4 py-3 shadow-sm">
+                  <Link to={session ? '/admin' : '/login'} className="block rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 shadow-sm">
                     {session ? '个人中心' : '登录'}
                   </Link>
                 </div>
@@ -213,20 +213,20 @@ export default function ClientLayout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-white/10 bg-black/35 backdrop-blur-xl">
-        <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-6 text-sm text-zinc-500 sm:px-6 lg:grid-cols-3 lg:px-8">
+      <footer className="border-t border-gray-200 bg-white">
+        <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-6 text-sm text-gray-500 sm:px-6 lg:grid-cols-3 lg:px-8">
           <div>备案信息：粤 ICP 备 XXXX 号</div>
           <div className="flex items-center gap-3 lg:justify-center">
             <span>支付方式</span>
-            <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1">Visa</span>
-            <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1">Mastercard</span>
-            <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1">Alipay</span>
+            <span className="rounded-md border border-gray-200 bg-gray-50 px-3 py-1">Visa</span>
+            <span className="rounded-md border border-gray-200 bg-gray-50 px-3 py-1">Mastercard</span>
+            <span className="rounded-md border border-gray-200 bg-gray-50 px-3 py-1">Alipay</span>
           </div>
           <div className="text-left lg:text-right">Apple-style storefront for premium gifting</div>
         </div>
       </footer>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/55 backdrop-blur-2xl md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden">
         <div className="mx-auto grid max-w-7xl grid-cols-3 px-3 py-2">
           <NavLink to="/" className={({ isActive }) => navClass(isActive)}>
             <Home className="h-5 w-5" />
@@ -248,7 +248,7 @@ export default function ClientLayout() {
 
 function navClass(isActive) {
   return [
-    'flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-xs font-medium transition',
-    isActive ? 'text-white' : 'text-zinc-500',
+    'flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150',
+    isActive ? 'text-blue-700' : 'text-gray-500',
   ].join(' ')
 }

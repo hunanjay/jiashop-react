@@ -186,112 +186,115 @@ export default function AccountManagerPage() {
   }
 
   return (
-    <Card className="border-white/10 bg-white/6 text-zinc-100 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
-      <CardHeader className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <CardTitle className="text-white">账号管理</CardTitle>
-            <p className="mt-1 text-sm text-zinc-500">支持账号新增、编辑、删除、角色分配和密码重置。</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={loadData} className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10">
-              <RefreshCw className="h-4 w-4" />
-              刷新
-            </Button>
-            <Button onClick={openCreateDrawer}>
-              <Plus className="h-4 w-4" />
-              新增账号
-            </Button>
+    <div className="space-y-6 text-gray-900">
+      <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="relative px-4 py-4 sm:px-5">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div>
+                <CardTitle className="text-2xl font-semibold text-gray-900 md:text-[28px]">账号管理</CardTitle>
+                <p className="mt-1.5 text-sm text-gray-500">支持账号新增、编辑、删除、角色分配和密码重置。</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                <Button variant="secondary" onClick={loadData} className="border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+                  <RefreshCw className="h-4 w-4" />
+                  刷新
+                </Button>
+                <Button onClick={openCreateDrawer}>
+                  <Plus className="h-4 w-4" />
+                  新增账号
+                </Button>
+              </div>
+            </div>
+            <div className="max-w-md">
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="搜索用户名、邮箱、手机号、角色"
+                className="border-gray-300 bg-white text-gray-900 placeholder:text-gray-400"
+              />
+            </div>
           </div>
         </div>
-        <div className="max-w-md">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索用户名、邮箱、手机号、角色"
-            className="border-white/10 bg-white/6 text-white placeholder:text-zinc-500"
-          />
-        </div>
-      </CardHeader>
+      </div>
 
-      <CardContent>
-        <Table>
-          <TableHeader>
+      <Table>
+        <TableHeader className="bg-gray-50">
+          <TableRow>
+            <TableHead className="text-gray-700 font-semibold">用户名</TableHead>
+            <TableHead className="text-gray-700 font-semibold">邮箱</TableHead>
+            <TableHead className="text-gray-700 font-semibold">手机号</TableHead>
+            <TableHead className="text-gray-700 font-semibold">角色</TableHead>
+            <TableHead className="text-gray-700 font-semibold">创建时间</TableHead>
+            <TableHead className="text-gray-700 font-semibold">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading ? (
             <TableRow>
-              <TableHead>用户名</TableHead>
-              <TableHead>邮箱</TableHead>
-              <TableHead>手机号</TableHead>
-              <TableHead>角色</TableHead>
-              <TableHead>创建时间</TableHead>
-              <TableHead>操作</TableHead>
+              <TableCell colSpan={6} className="py-10 text-center text-gray-500">
+                加载中...
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-zinc-500">
-                  加载中...
+          ) : filteredUsers.length ? (
+            filteredUsers.map((user) => (
+              <TableRow key={user.id} className="hover:bg-gray-50">
+                <TableCell className="font-medium text-gray-900">{user.username}</TableCell>
+                <TableCell className="text-gray-700">{user.email}</TableCell>
+                <TableCell className="text-gray-700">{user.phone || '-'}</TableCell>
+                <TableCell>
+                  <Badge variant={user.role === 'superadmin' ? 'default' : 'secondary'}>{user.role}</Badge>
+                </TableCell>
+                <TableCell className="text-gray-500">{formatDateTime(user.created_at)}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => openEditDrawer(user)} className="border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+                      <Edit3 className="h-4 w-4" />
+                      编辑
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => requestResetPassword(user)} disabled={!isSuperAdmin} className="border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+                      <Shield className="h-4 w-4" />
+                      重置密码
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => requestDeleteUser(user)} disabled={!isSuperAdmin}>
+                      <Trash2 className="h-4 w-4" />
+                      删除
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
-            ) : filteredUsers.length ? (
-              filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium text-white">{user.username}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.phone || '-'}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.role === 'superadmin' ? 'default' : 'secondary'}>{user.role}</Badge>
-                  </TableCell>
-                  <TableCell>{formatDateTime(user.created_at)}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => openEditDrawer(user)} className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10">
-                        <Edit3 className="h-4 w-4" />
-                        编辑
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => requestResetPassword(user)} disabled={!isSuperAdmin} className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10">
-                        <Shield className="h-4 w-4" />
-                        重置密码
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => requestDeleteUser(user)} disabled={!isSuperAdmin}>
-                        <Trash2 className="h-4 w-4" />
-                        删除
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-zinc-500">
-                  暂无账号
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} className="py-10 text-center text-gray-500">
+                暂无账号
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
 
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="right" className="w-full max-w-2xl bg-[#111114]/96 text-zinc-100">
+        <SheetContent side="right" className="w-full max-w-2xl bg-white text-gray-900 border-l border-gray-200 shadow-xl">
           <SheetHeader>
-            <SheetTitle>{selectedId ? '编辑账号' : '新增账号'}</SheetTitle>
-            <SheetDescription>维护用户名、邮箱、手机号和角色。</SheetDescription>
+            <SheetTitle className="text-gray-900 font-semibold">{selectedId ? '编辑账号' : '新增账号'}</SheetTitle>
+            <SheetDescription className="text-gray-500">维护用户名、邮箱、手机号和角色。</SheetDescription>
           </SheetHeader>
           <SheetBody className="space-y-4 p-5">
-            <Input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} placeholder="用户名" />
-            <Input value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="邮箱" />
-            <Input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="手机号" />
+            <Input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} placeholder="用户名" className="border-gray-300 text-gray-900 bg-white" />
+            <Input value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} placeholder="邮箱" className="border-gray-300 text-gray-900 bg-white" />
+            <Input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="手机号" className="border-gray-300 text-gray-900 bg-white" />
             <Input
               value={form.password}
               onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
               placeholder={selectedId ? '留空则不修改密码' : '初始密码'}
               type="password"
+              className="border-gray-300 text-gray-900 bg-white"
             />
             <select
               value={form.role}
               onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}
-              className="h-11 w-full rounded-2xl border border-white/10 bg-white/6 px-4 text-sm text-white"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-900 shadow-sm"
             >
               {roleOptions.map((role) => (
                 <option key={role.value} value={role.value}>
@@ -300,8 +303,8 @@ export default function AccountManagerPage() {
               ))}
             </select>
           </SheetBody>
-          <SheetFooter className="border-t border-white/10 p-5">
-            <Button variant="secondary" onClick={() => setDrawerOpen(false)} className="border-white/10 bg-white/6 text-zinc-200 hover:bg-white/10">
+          <SheetFooter className="border-t border-gray-200 bg-gray-50 p-5">
+            <Button variant="secondary" onClick={() => setDrawerOpen(false)} className="border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
               取消
             </Button>
             <Button onClick={requestSaveUser}>保存</Button>
@@ -354,6 +357,6 @@ export default function AccountManagerPage() {
         }}
         onConfirm={deleteUser}
       />
-    </Card>
+    </div>
   )
 }

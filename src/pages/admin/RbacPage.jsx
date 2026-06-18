@@ -78,74 +78,75 @@ export default function RbacPage() {
   }
 
   return (
-    <Card className="border-white/10 bg-white/6 text-zinc-100 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
-      <CardHeader className="flex flex-col gap-2">
-        <CardTitle className="text-white">RBAC 权限设置</CardTitle>
-        <p className="text-sm text-zinc-500">仅 SuperAdmin 可查看和修改用户角色。</p>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
+    <div className="space-y-6 text-gray-900">
+      <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="relative px-4 py-4 sm:px-5">
+          <CardTitle className="text-2xl font-semibold text-gray-900 md:text-[28px]">RBAC 权限设置</CardTitle>
+          <p className="mt-1.5 text-sm text-gray-500">仅 SuperAdmin 可查看和修改用户角色。</p>
+        </div>
+      </div>
+
+      <Table>
+        <TableHeader className="bg-gray-50">
+          <TableRow>
+            <TableHead className="text-gray-700 font-semibold">用户名</TableHead>
+            <TableHead className="text-gray-700 font-semibold">邮箱</TableHead>
+            <TableHead className="text-gray-700 font-semibold">当前角色</TableHead>
+            <TableHead className="text-gray-700 font-semibold">目标角色</TableHead>
+            <TableHead className="text-gray-700 font-semibold">创建时间</TableHead>
+            <TableHead className="text-gray-700 font-semibold">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading ? (
             <TableRow>
-              <TableHead>用户名</TableHead>
-              <TableHead>邮箱</TableHead>
-              <TableHead>当前角色</TableHead>
-              <TableHead>目标角色</TableHead>
-              <TableHead>创建时间</TableHead>
-              <TableHead>操作</TableHead>
+              <TableCell colSpan={6} className="py-10 text-center text-gray-500">
+                加载中...
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-slate-500">
-                  加载中...
+          ) : users.length ? (
+            users.map((user) => (
+              <TableRow key={user.id} className="hover:bg-gray-50">
+                <TableCell className="font-medium text-gray-900">{user.username}</TableCell>
+                <TableCell className="text-gray-700">{user.email}</TableCell>
+                <TableCell>
+                  <Badge variant={user.role === 'superadmin' ? 'default' : 'secondary'}>{user.role}</Badge>
+                </TableCell>
+                <TableCell>
+                  <select
+                    value={draftRoles[user.id] || user.role || 'Guest'}
+                    onChange={(event) =>
+                      setDraftRoles((current) => ({
+                        ...current,
+                        [user.id]: event.target.value,
+                      }))
+                    }
+                    className="h-11 rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-900 shadow-sm"
+                  >
+                    {roleOptions.map((role) => (
+                      <option key={role.value} value={role.value}>
+                        {role.label}
+                      </option>
+                    ))}
+                  </select>
+                </TableCell>
+                <TableCell className="text-gray-500">{formatDateTime(user.created_at)}</TableCell>
+                <TableCell>
+                  <Button size="sm" onClick={() => saveRole(user.id)} disabled={savingId === user.id}>
+                    {savingId === user.id ? '保存中...' : '保存'}
+                  </Button>
                 </TableCell>
               </TableRow>
-            ) : users.length ? (
-              users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium text-white">{user.username}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.role === 'superadmin' ? 'default' : 'secondary'}>{user.role}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <select
-                      value={draftRoles[user.id] || user.role || 'Guest'}
-                      onChange={(event) =>
-                        setDraftRoles((current) => ({
-                          ...current,
-                          [user.id]: event.target.value,
-                        }))
-                      }
-                      className="h-11 rounded-full border border-white/10 bg-white/6 px-4 text-sm text-white"
-                    >
-                      {roleOptions.map((role) => (
-                        <option key={role.value} value={role.value}>
-                          {role.label}
-                        </option>
-                      ))}
-                    </select>
-                  </TableCell>
-                  <TableCell>{formatDateTime(user.created_at)}</TableCell>
-                  <TableCell>
-                    <Button size="sm" onClick={() => saveRole(user.id)} disabled={savingId === user.id}>
-                      {savingId === user.id ? '保存中...' : '保存'}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-slate-500">
-                  暂无用户
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} className="py-10 text-center text-gray-500">
+                暂无用户
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
 
       <ConfirmDialog
         open={confirmOpen}
@@ -162,6 +163,6 @@ export default function RbacPage() {
         }}
         onConfirm={confirmSaveRole}
       />
-    </Card>
+    </div>
   )
 }

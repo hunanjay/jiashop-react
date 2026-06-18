@@ -121,7 +121,7 @@ export function FileUploadField({
   return (
     <>
       <div
-        className={cn('overflow-hidden rounded-3xl border border-black/5 bg-slate-50/50 shadow-inner transition-all outline-none', className)}
+        className={cn('overflow-hidden rounded-lg border border-gray-200 bg-gray-50 shadow-sm transition-colors outline-none', className)}
         tabIndex={0}
         onPaste={handlePaste}
       >
@@ -133,7 +133,7 @@ export function FileUploadField({
                 <button
                   type="button"
                   onClick={handleEditImage}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-slate-950 shadow-lg backdrop-blur-md transition hover:bg-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm transition-colors hover:bg-gray-100"
                   title="编辑图片"
                 >
                   <Edit className="h-4 w-4" />
@@ -142,7 +142,7 @@ export function FileUploadField({
                   type="button"
                   onClick={handleRestoreOriginal}
                   disabled={!originalSourceRef.current}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-slate-950 shadow-lg backdrop-blur-md transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                   title="恢复原图"
                 >
                   <RotateCcw className="h-4 w-4" />
@@ -150,7 +150,7 @@ export function FileUploadField({
                 <button
                   type="button"
                   onClick={handlePickFile}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-slate-950 shadow-lg backdrop-blur-md transition hover:bg-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm transition-colors hover:bg-gray-100"
                   title="更换图片"
                 >
                   <Upload className="h-4 w-4" />
@@ -158,18 +158,18 @@ export function FileUploadField({
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/80 text-white shadow-lg backdrop-blur-md transition hover:bg-rose-600"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600 text-white shadow-sm transition-colors hover:bg-red-700"
                   title="删除"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
-            <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold text-slate-800 backdrop-blur-md ring-1 ring-black/5 shadow-sm">
-              <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+            <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[10px] font-bold text-gray-800 ring-1 ring-gray-200 shadow-sm">
+              <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />
               {aspectRatio === 1 ? '主图规格 800×800' : '主图规格 3:4'}
             </div>
-            <div className="absolute bottom-3 right-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold text-slate-600 backdrop-blur-md ring-1 ring-black/5 shadow-sm">
+            <div className="absolute bottom-3 right-3 rounded-full bg-white px-3 py-1 text-[10px] font-bold text-gray-600 ring-1 ring-gray-200 shadow-sm">
               点击后可直接 Ctrl+V 粘贴
             </div>
           </div>
@@ -177,10 +177,10 @@ export function FileUploadField({
           <button
             type="button"
             onClick={handlePickFile}
-            className="flex w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 bg-white/40 text-slate-400 transition-colors hover:bg-white hover:text-slate-600"
+            className="flex w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-200 bg-white text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-600"
             style={{ aspectRatio }}
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 shadow-sm ring-1 ring-black/5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-50 shadow-sm ring-1 ring-gray-200">
               <Upload className="h-5 w-5" />
             </div>
             <div className="text-center">
@@ -337,9 +337,9 @@ export function MultiFileUploadField({
   return (
     <div className={cn('space-y-4 text-left outline-none', className)} tabIndex={0} onPaste={handlePaste}>
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">{label}</span>
         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full ring-1", 
-          values.length >= maxFiles ? "bg-amber-50 text-amber-600 ring-amber-200" : "bg-blue-50 text-blue-600 ring-blue-100"
+          values.length >= maxFiles ? "bg-amber-50 text-amber-600 ring-amber-200" : "bg-blue-50 text-blue-700 ring-blue-100"
         )}>
           {values.length} / {maxFiles}
         </span>
@@ -361,18 +361,18 @@ export function MultiFileUploadField({
           onDrop={handleDrop}
           onClick={handlePickFiles}
           className={cn(
-            'group relative flex min-h-[100px] cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed transition-all duration-300',
+            'group relative flex min-h-[100px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-all duration-300',
             isDragging 
               ? 'border-blue-500 bg-blue-50' 
-              : 'border-slate-200 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-50'
+              : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
           )}
         >
-          <div className="flex flex-col items-center gap-2 text-slate-400 transition-colors group-hover:text-slate-600">
-            <div className="rounded-full bg-white p-2.5 shadow-sm ring-1 ring-black/5 group-hover:shadow-md">
+          <div className="flex flex-col items-center gap-2 text-gray-400 transition-colors group-hover:text-gray-600">
+            <div className="rounded-lg bg-white p-2.5 shadow-sm ring-1 ring-gray-200 group-hover:shadow-md">
               <Upload className="h-4 w-4" />
             </div>
             <p className="text-[10px] font-bold uppercase tracking-widest">点击或拖拽上传</p>
-            <p className="text-[9px] font-medium text-slate-400">也可以直接 Ctrl+V 粘贴</p>
+            <p className="text-[9px] font-medium text-gray-400">也可以直接 Ctrl+V 粘贴</p>
           </div>
         </div>
       )}
@@ -382,15 +382,15 @@ export function MultiFileUploadField({
           {values.map((src, index) => (
             <div
               key={index}
-            className="group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm ring-1 ring-black/5 transition hover:shadow-md"
+            className="group relative min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm ring-1 ring-gray-100 transition hover:shadow-md"
             style={{ aspectRatio }}
           >
-              <img src={src} alt={`${label}-${index}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <img src={src} alt={`${label}-${index}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
               <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); startCrop(index); }}
-                  className="rounded-full bg-white/90 p-1.5 text-slate-900 shadow-lg backdrop-blur-md transition hover:bg-white"
+                  className="rounded-lg bg-white p-1.5 text-gray-900 shadow-sm transition hover:bg-gray-100"
                   title="裁剪"
                 >
                   <Crop className="h-3.5 w-3.5" />
@@ -399,7 +399,7 @@ export function MultiFileUploadField({
                   type="button"
                   onClick={(e) => { e.stopPropagation(); restoreImage(index); }}
                   disabled={!originalSourcesRef.current[index] || originalSourcesRef.current[index] === values[index]}
-                  className="rounded-full bg-white/90 p-1.5 text-slate-900 shadow-lg backdrop-blur-md transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+                  className="rounded-lg bg-white p-1.5 text-gray-900 shadow-sm transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-45"
                   title="恢复原图"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
@@ -407,13 +407,13 @@ export function MultiFileUploadField({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); removeImage(index); }}
-                  className="rounded-full bg-rose-500/90 p-1.5 text-white shadow-lg backdrop-blur-md transition hover:bg-rose-600"
+                  className="rounded-lg bg-red-600 p-1.5 text-white shadow-sm transition hover:bg-red-700"
                   title="移除"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <div className="absolute bottom-1.5 left-2 rounded-md bg-white/90 px-1 py-0.5 text-[9px] font-bold tabular-nums text-slate-800 backdrop-blur-md shadow-sm ring-1 ring-black/5">
+              <div className="absolute bottom-1.5 left-2 rounded-md bg-white px-1 py-0.5 text-[9px] font-bold tabular-nums text-gray-800 shadow-sm ring-1 ring-gray-200">
                 # {index + 1}
               </div>
             </div>

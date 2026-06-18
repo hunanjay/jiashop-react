@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ImageCropper } from "./ImageCropper";
+import { normalizeOrientation } from "../../lib/crop-image";
 import { Button } from "./button";
 import { Card, CardContent } from "./card";
 import { Upload, X, Edit } from "lucide-react";
@@ -65,8 +66,9 @@ export function ImageUploader({
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setCropImage(reader.result);
+    reader.onload = async () => {
+      const normalized = await normalizeOrientation(reader.result);
+      setCropImage(normalized);
       setCurrentCropType(type);
       setCurrentEditIndex(-1);
     };
@@ -153,28 +155,28 @@ export function ImageUploader({
       {/* 主图上传 */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-l-4 border-blue-600 pl-3">主展示封面 (800×800)</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-900 border-l-4 border-blue-600 pl-3">主展示封面 (800×800)</h3>
         </div>
         {mainImage ? (
-          <Card className="relative w-full max-w-sm overflow-hidden group border-none shadow-none bg-slate-100/50 rounded-3xl ring-1 ring-black/5">
+          <Card className="relative w-full max-w-sm overflow-hidden group border border-gray-200 shadow-sm rounded-xl bg-white">
             <CardContent className="p-3">
-              <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm" style={{ aspectRatio: mainAspectRatio }}>
+              <div className="relative bg-white rounded-lg overflow-hidden shadow-sm" style={{ aspectRatio: mainAspectRatio }}>
                 <img
                   src={mainImage.url}
                   alt="主图"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-300"
                 />
-                <div className="absolute inset-0 flex items-center justify-center gap-3 bg-slate-950/40 opacity-0 transition-all duration-300 group-hover:opacity-100 backdrop-blur-[2px]">
+                <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/40 opacity-0 transition-all duration-300 group-hover:opacity-100">
                   <button
                     onClick={handleEditMainImage}
-                    className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-900 shadow-2xl transition-all hover:scale-110 active:scale-90"
+                    className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-900 shadow-md transition-colors hover:bg-gray-50"
                     title="编辑裁剪"
                   >
                     <Edit className="h-5 w-5" />
                   </button>
                   <button
                     onClick={handleRemoveMainImage}
-                    className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-500 text-white shadow-2xl transition-all hover:scale-110 active:scale-90"
+                    className="flex h-12 w-12 items-center justify-center rounded-full bg-red-700 text-white shadow-md transition-colors hover:bg-red-800"
                     title="移除图片"
                   >
                     <X className="h-5 w-5" />
@@ -186,14 +188,14 @@ export function ImageUploader({
         ) : (
           <div
             onClick={() => mainInputRef.current?.click()}
-            className="w-full max-w-sm border-2 border-dashed border-slate-200 bg-white/40 rounded-[32px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
+            className="w-full max-w-sm border border-dashed border-gray-200 bg-gray-50 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-600 hover:bg-blue-50 transition duration-150 group"
             style={{ aspectRatio: mainAspectRatio }}
           >
-            <div className="h-16 w-16 rounded-3xl bg-white shadow-sm ring-1 ring-black/5 flex items-center justify-center mb-5 group-hover:shadow-md group-hover:rotate-6 transition-all duration-500">
-               <Upload className="h-7 w-7 text-slate-400 group-hover:text-blue-500 transition-colors" />
+            <div className="h-16 w-16 rounded-lg bg-white shadow-sm border border-gray-200 flex items-center justify-center mb-5 transition duration-150">
+               <Upload className="h-7 w-7 text-gray-400 group-hover:text-blue-600 transition-colors" />
             </div>
-            <p className="text-sm font-bold text-slate-600">上传商品主图</p>
-            <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-widest font-medium">Auto-Crop to 3:4 Aspect</p>
+            <p className="text-sm font-bold text-gray-600">上传商品主图</p>
+            <p className="text-[10px] text-gray-400 mt-2 uppercase tracking-widest font-medium">Auto-Crop to 3:4 Aspect</p>
           </div>
         )}
         <input
@@ -208,35 +210,35 @@ export function ImageUploader({
       {/* 附图上传 */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-l-4 border-blue-600 pl-3">附属画廊库 (3:4) ({subImages.length}/{maxSubImages})</h3>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tabular-nums">Gallery Slots</span>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-900 border-l-4 border-blue-600 pl-3">附属画廊库 (3:4) ({subImages.length}/{maxSubImages})</h3>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tabular-nums">Gallery Slots</span>
         </div>
         
         <div className="space-y-4">
           {subImages.map((image, index) => (
-            <Card key={image.id} className="relative w-full max-w-sm overflow-hidden group border-none shadow-none bg-slate-100/30 rounded-3xl ring-1 ring-black/5">
+            <Card key={image.id} className="relative w-full max-w-sm overflow-hidden group border border-gray-200 shadow-sm rounded-xl bg-white">
               <CardContent className="p-3">
-                <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm" style={{ aspectRatio: subAspectRatio }}>
+                <div className="relative bg-white rounded-lg overflow-hidden shadow-sm" style={{ aspectRatio: subAspectRatio }}>
                   <img
                     src={image.url}
                     alt={`附图 ${index + 1}`}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center gap-3 bg-slate-950/40 opacity-0 transition-all duration-300 group-hover:opacity-100 backdrop-blur-[2px]">
+                  <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/40 opacity-0 transition-all duration-300 group-hover:opacity-100">
                     <button
                       onClick={(e) => handleEditSubImage(e, index)}
-                      className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-900 shadow-xl transition-all hover:scale-110 active:scale-90"
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-900 shadow-md transition-colors hover:bg-gray-50"
                     >
                       <Edit className="h-4.5 w-4.5" />
                     </button>
                     <button
                       onClick={(e) => handleRemoveSubImage(e, index)}
-                      className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-500 text-white shadow-xl transition-all hover:scale-110 active:scale-90"
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-red-700 text-white shadow-md transition-colors hover:bg-red-800"
                     >
                       <X className="h-4.5 w-4.5" />
                     </button>
                   </div>
-                  <div className="absolute bottom-3 left-3 px-2 py-1 bg-white/90 backdrop-blur rounded-lg text-[9px] font-bold text-slate-900 shadow-sm uppercase tracking-tighter ring-1 ring-black/5">
+                  <div className="absolute bottom-3 left-3 px-2 py-1 bg-white/90 rounded-md text-[9px] font-bold text-gray-900 shadow-sm uppercase tracking-tighter border border-gray-200">
                     Gallery #{index + 1}
                   </div>
                 </div>
@@ -247,14 +249,14 @@ export function ImageUploader({
           {subImages.length < maxSubImages && (
             <div
               onClick={() => subInputRef.current?.click()}
-              className="w-full max-w-sm border-2 border-dashed border-slate-200 bg-white/40 rounded-[32px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-all duration-500 group"
+              className="w-full max-w-sm border border-dashed border-gray-200 bg-gray-50 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-600 hover:bg-blue-50 transition duration-150 group"
               style={{ aspectRatio: subAspectRatio }}
             >
-              <div className="h-12 w-12 rounded-2xl bg-white shadow-sm ring-1 ring-black/5 flex items-center justify-center mb-4 group-hover:shadow-md group-hover:rotate-[-6deg] transition-all duration-500">
-                <Upload className="h-5 w-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+              <div className="h-12 w-12 rounded-lg bg-white shadow-sm border border-gray-200 flex items-center justify-center mb-4 transition duration-150">
+                <Upload className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
               </div>
-              <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">新增附图 (Slot {subImages.length + 1})</p>
-              <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-tighter">Click to select asset</p>
+              <p className="text-[11px] font-bold text-gray-600 uppercase tracking-widest">新增附图 (Slot {subImages.length + 1})</p>
+              <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-tighter">Click to select asset</p>
             </div>
           )}
         </div>

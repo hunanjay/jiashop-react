@@ -46,7 +46,7 @@ export function FloatingCartButton() {
       {flights.map((flight) => (
         <div
           key={flight.id}
-          className="pointer-events-none fixed z-50 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-[0_12px_30px_rgba(0,0,0,0.18)]"
+          className="pointer-events-none fixed z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-700 text-white shadow-md"
           style={{
             left: `${flight.left}px`,
             top: `${flight.top}px`,
@@ -62,12 +62,12 @@ export function FloatingCartButton() {
       <Link
         ref={buttonRef}
         to="/cart"
-        className="fixed right-4 top-4 z-40 inline-flex items-center gap-2 rounded-full border border-[var(--outline-variant)]/35 bg-[var(--surface-container-lowest)] px-4 py-2.5 text-sm font-medium text-[var(--on-surface)] shadow-[0_16px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[var(--primary)]/35 hover:text-[var(--primary)] sm:right-6 sm:top-6"
+        className="fixed right-4 top-4 z-40 inline-flex items-center gap-2 rounded-lg bg-white border border-gray-200 shadow-md px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 transition duration-150 sm:right-6 sm:top-6"
         aria-label="查看购物车"
       >
         <ShoppingCart className="h-4 w-4" />
         <span className="hidden sm:inline">购物车</span>
-        <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-[var(--primary)] px-2 py-0.5 text-[11px] font-semibold text-[var(--on-primary)]">
+        <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-blue-700 px-2 py-0.5 text-[11px] font-semibold text-white">
           {cartCount}
         </span>
       </Link>

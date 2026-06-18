@@ -5,17 +5,17 @@ import { cva } from 'class-variance-authority'
 import { cn } from '../../lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200/80 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
         default:
-          'bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-500 text-white shadow-[0_18px_40px_rgba(129,140,248,0.28)] hover:-translate-y-0.5 hover:brightness-105',
+          'bg-blue-700 text-white shadow-sm hover:bg-blue-800',
         secondary:
-          'border border-slate-200/80 bg-white/75 text-slate-800 shadow-sm backdrop-blur-xl hover:-translate-y-0.5 hover:bg-white',
-        ghost: 'bg-transparent text-slate-700 hover:bg-slate-100/80',
+          'border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50',
+        ghost: 'bg-transparent text-gray-700 hover:bg-gray-100',
         destructive:
-          'border border-rose-200 bg-rose-50/90 text-rose-700 shadow-sm hover:-translate-y-0.5 hover:bg-rose-100',
+          'border border-red-200 bg-red-50 text-red-700 shadow-sm hover:bg-red-100',
       },
       size: {
         default: 'h-11 px-4 py-2.5',

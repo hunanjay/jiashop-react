@@ -41,12 +41,12 @@ export default function ExportPage() {
   }
 
   return (
-    <Card className="border-white/10 bg-white/6 text-zinc-100 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-2xl">
-      <CardHeader className="flex flex-col gap-2">
-        <CardTitle className="text-white">数据导出</CardTitle>
-        <p className="text-sm text-zinc-500">支持导出订单、客户和账号数据为 CSV。</p>
+    <Card className="bg-white border border-gray-200 rounded-xl shadow-sm text-gray-900">
+      <CardHeader className="flex flex-col gap-2 px-4 py-4 sm:px-5">
+        <CardTitle className="text-2xl font-semibold text-gray-900 md:text-[28px]">数据导出</CardTitle>
+        <p className="text-sm text-gray-500">支持导出订单、客户和账号数据为 CSV。</p>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-5 px-4 pb-4 sm:px-5 sm:pb-5 pt-0">
         <div className="grid gap-3 sm:grid-cols-3">
           {OPTIONS.map((item) => (
             <button
@@ -54,10 +54,10 @@ export default function ExportPage() {
               type="button"
               onClick={() => setResource(item.value)}
               className={[
-                'rounded-3xl border px-4 py-4 text-left transition',
+                'rounded-xl border px-4 py-4 text-left transition shadow-xs',
                 resource === item.value
-                  ? 'border-transparent bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400 text-white'
-                  : 'border-white/10 bg-white/6 text-zinc-300 hover:border-white/20 hover:bg-white/10',
+                  ? 'bg-blue-50 border-blue-700 text-blue-900 font-semibold'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50',
               ].join(' ')}
             >
               <div className="flex items-center gap-2">

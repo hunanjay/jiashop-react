@@ -5,6 +5,7 @@ import { Upload, X, Edit } from "lucide-react";
 import { useApp } from "../../lib/app-context";
 import { cn } from "../../lib/utils";
 import { extractClipboardImage } from "../../lib/clipboard-image";
+import { normalizeOrientation } from "../../lib/crop-image";
 
 export function ImageCardUploader({ 
   value, 
@@ -64,17 +65,22 @@ export function ImageCardUploader({
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setCropImage(reader.result);
+    reader.onload = async () => {
+      const normalized = await normalizeOrientation(reader.result);
+      setCropImage(normalized);
     };
     reader.readAsDataURL(file);
   };
 
   const handleCropComplete = (croppedImageUrl) => {
-    setCurrentImage({
-      url: croppedImageUrl,
-      originalUrl: cropImage || value,
-    });
+    // For "add-new" slots (value is null) the image is owned by the parent's
+    // mapped list via onChange — don't mirror it in local state or it appears twice.
+    if (value !== null) {
+      setCurrentImage({
+        url: croppedImageUrl,
+        originalUrl: cropImage || value,
+      });
+    }
     onChange(croppedImageUrl);
     setCropImage(null);
     pushToast("success", "图片上传成功");
@@ -107,7 +113,8 @@ export function ImageCardUploader({
       return
     }
 
-    setCropImage(pastedImage)
+    const normalized = await normalizeOrientation(pastedImage)
+    setCropImage(normalized)
   };
 
   return (
