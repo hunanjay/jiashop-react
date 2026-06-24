@@ -131,6 +131,26 @@ export default function ProductDetailPage() {
                     {product.description || '暂无商品描述。'}
                   </p>
                 </div>
+
+                {product.specs && (
+                  <div className="mt-6 border-t border-gray-100 pt-6">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 opacity-70 mb-3">规格参数</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {product.specs
+                        .split(/[\n,，;；]/)
+                        .map((item) => item.trim())
+                        .filter(Boolean)
+                        .map((spec, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center rounded-lg bg-blue-50 border border-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                          >
+                            {spec}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-auto rounded-xl border border-gray-200 bg-white p-6 shadow-sm">

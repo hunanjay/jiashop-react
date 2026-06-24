@@ -42,7 +42,13 @@ export default function CatalogPage() {
   const productRows = useMemo(() => {
     return products
       .filter((product) => {
-        const text = [product.name, product.description, product.category, product.customization?.type]
+        const text = [
+          product.name,
+          product.description,
+          product.category,
+          product.customization?.type,
+          product.specs,
+        ]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()

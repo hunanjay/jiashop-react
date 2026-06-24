@@ -193,6 +193,36 @@ export default function ProductFormModal({
                       className="resize-none border-gray-300 bg-white text-gray-900 text-sm focus:border-blue-500/20 rounded-lg"
                     />
                   </label>
+
+                  <label className="block space-y-1.5">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">规格参数</span>
+                      <span className="text-[10px] text-gray-400 font-normal">💡 提示：每一个规格属性必须占一行，以换行区分并生成不同的标签</span>
+                    </div>
+                    <Textarea
+                      value={form.specs}
+                      onChange={(e) => setForm((c) => ({ ...c, specs: e.target.value }))}
+                      rows={3}
+                      className="resize-none border-gray-300 bg-white text-sm text-gray-900 focus:border-blue-500/20 rounded-lg"
+                      placeholder={"请输入商品规格，例如：\n材质: K9水晶\n尺寸: 20cm x 12cm"}
+                    />
+                    {form.specs && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {form.specs
+                          .split(/[\n,，;；]/)
+                          .map((item) => item.trim())
+                          .filter(Boolean)
+                          .map((spec, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center rounded-md bg-blue-50 border border-blue-100 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700 animate-fade-in"
+                            >
+                              {spec}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                  </label>
                 </div>
               </div>
             </div>

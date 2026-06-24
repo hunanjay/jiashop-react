@@ -442,7 +442,7 @@ export default function App() {
     <AppProvider>
       <BrowserRouter>
         <AppRoutes />
-        <AiChatWidget />
+        {/* <AiChatWidget /> */}
       </BrowserRouter>
     </AppProvider>
   )
