@@ -155,6 +155,7 @@ export default function CartPage() {
       product_id: item.id,
       product_name: item.name,
       product_category: item.category || '',
+      variant_name: item.variantName || '',
       qty: item.quantity,
       price: item.price,
     }))
@@ -243,6 +244,11 @@ export default function CartPage() {
                 <img src={item.image_url} alt={item.name} className="h-28 w-28 rounded-lg object-cover" />
                 <div className="min-w-0 flex-1">
                   <div className="text-lg font-semibold text-gray-900">{item.name}</div>
+                  {item.variantName && (
+                    <div className="mt-1 inline-flex items-center rounded-md bg-blue-50 border border-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                      {item.variantName}
+                    </div>
+                  )}
                   <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-500">{item.description}</p>
                   <div className="mt-4 flex items-center gap-2">
                     <CartQuantityControl
@@ -417,6 +423,9 @@ export default function CartPage() {
                       <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
                         <div className="min-w-0">
                           <div className="truncate font-medium text-gray-900">{item.name}</div>
+                          {item.variantName && (
+                            <div className="text-xs text-blue-600">{item.variantName}</div>
+                          )}
                           <div className="text-xs text-gray-500">x {item.quantity}</div>
                         </div>
                         <div className="font-medium text-gray-900">{formatCurrency(item.subtotal)}</div>

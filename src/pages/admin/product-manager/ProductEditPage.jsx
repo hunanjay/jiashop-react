@@ -14,11 +14,13 @@ const EMPTY_FORM = {
   price: '',
   stock: 99,
   description: '',
-  specs: '',
   category: '',
   image_url: '',
   images: [],
+  variants: [],
 }
+
+const EMPTY_VARIANT = { name: '', price: '', stock: '' }
 
 export default function ProductEditPage() {
   const { id } = useParams()
@@ -26,6 +28,12 @@ export default function ProductEditPage() {
   const { pushToast, categoryOptions, reloadProducts, reloadProductCategories } = useApp()
   const [form, setForm] = useState(EMPTY_FORM)
   const [loading, setLoading] = useState(false)
+
+  const activeVariants = (form.variants || []).filter((v) => v.name?.trim())
+  const hasVariants = activeVariants.length > 0
+  const autoPrice = hasVariants
+    ? Math.min(...activeVariants.map((v) => Number(v.price) || 0))
+    : null
   const [saving, setSaving] = useState(false)
   const [selectedPasteTarget, setSelectedPasteTarget] = useState('main')
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false)
@@ -85,10 +93,10 @@ export default function ProductEditPage() {
         price: product.price || '',
         stock: Number(product.stock) || 99,
         description: product.description || '',
-        specs: product.specs || '',
         category: product.category || '',
         image_url: product.image_url || '',
         images: product.images || [],
+        variants: product.variants || [],
       })
     } catch (err) {
       pushToast('error', '加载失败', '无法获取商品信息')
@@ -103,8 +111,9 @@ export default function ProductEditPage() {
   }, [loadProduct])
 
   const handleSave = async () => {
-    if (!form.name || !form.price) {
-      pushToast('warning', '请填写必填项', '商品名称和价格为必填项')
+    const hasVariants = (form.variants || []).filter((v) => v.name?.trim()).length > 0
+    if (!form.name || (!hasVariants && !form.price)) {
+      pushToast('warning', '请填写必填项', hasVariants ? '商品名称为必填项' : '商品名称和价格为必填项')
       return
     }
 
@@ -144,12 +153,25 @@ export default function ProductEditPage() {
         finalImageUrl = 'uploads/' + parts[1].split('?')[0]
       }
 
+      const cleanVariants = (form.variants || [])
+        .filter((v) => v.name?.trim())
+        .map((v) => ({
+          name: v.name.trim(),
+          price: Number(v.price) || 0,
+          stock: Number(v.stock) || 0,
+        }))
+
+      const basePrice = cleanVariants.length > 0
+        ? Math.min(...cleanVariants.map((v) => v.price))
+        : Number(form.price) || 0
+
       const finalPayload = {
         ...form,
-        price: Number(form.price) || 0,
+        price: basePrice,
         stock: Number(form.stock) || 99,
         image_url: finalImageUrl,
         images: finalImages,
+        variants: cleanVariants,
       }
 
       if (isEdit) {
@@ -304,14 +326,17 @@ export default function ProductEditPage() {
 
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                     <label className="block space-y-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">零售价格</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">
+                        零售价格{hasVariants && <span className="ml-1 text-[10px] font-normal text-gray-400 normal-case">由规格自动取最低价</span>}
+                      </span>
                       <div className="relative group">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-900">¥</span>
                         <Input
                           type="number"
-                          value={form.price}
-                          onChange={(e) => setForm((c) => ({ ...c, price: e.target.value }))}
-                          className="h-11 border border-gray-300 bg-white text-sm text-gray-900 pl-10 pr-4 rounded-lg focus:border-blue-500 focus:ring-blue-500/20"
+                          value={hasVariants ? autoPrice ?? '' : form.price}
+                          onChange={(e) => !hasVariants && setForm((c) => ({ ...c, price: e.target.value }))}
+                          readOnly={hasVariants}
+                          className={`h-11 border border-gray-300 text-sm text-gray-900 pl-10 pr-4 rounded-lg focus:border-blue-500 focus:ring-blue-500/20 ${hasVariants ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white'}`}
                         />
                       </div>
                     </label>
@@ -406,35 +431,78 @@ export default function ProductEditPage() {
                     />
                   </label>
 
-                  <label className="block space-y-1.5">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">规格参数</span>
-                      <span className="text-[10px] text-gray-400 font-normal">💡 提示：每一个规格属性必须占一行，以换行区分并生成不同的标签</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">商品规格</span>
+                      <span className="text-[10px] text-gray-400">可选 · 有规格时客户须选规格才能加入购物车</span>
                     </div>
-                    <Textarea
-                      value={form.specs}
-                      onChange={(e) => setForm((c) => ({ ...c, specs: e.target.value }))}
-                      rows={4}
-                      className="resize-none border border-gray-300 bg-white text-sm leading-relaxed text-gray-700 p-3 rounded-lg focus:border-blue-500 focus:ring-blue-500/20 scrollbar-hide"
-                      placeholder={"请输入商品规格，例如：\n材质: K9水晶\n尺寸: 20cm x 12cm"}
-                    />
-                    {form.specs && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {form.specs
-                          .split(/[\n,，;；]/)
-                          .map((item) => item.trim())
-                          .filter(Boolean)
-                          .map((spec, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center rounded-md bg-blue-50 border border-blue-100 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700 animate-fade-in"
+
+                    {(form.variants || []).length > 0 && (
+                      <div className="rounded-lg border border-gray-200 overflow-hidden">
+                        <div className="grid grid-cols-[1fr_100px_80px_32px] gap-0 bg-gray-50 border-b border-gray-200 px-3 py-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">规格名称</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">价格 (¥)</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">库存</span>
+                          <span />
+                        </div>
+                        {(form.variants || []).map((v, idx) => (
+                          <div key={idx} className="grid grid-cols-[1fr_100px_80px_32px] gap-0 items-center border-b border-gray-100 last:border-b-0 px-3 py-2">
+                            <input
+                              value={v.name}
+                              onChange={(e) => setForm((c) => {
+                                const next = [...c.variants]
+                                next[idx] = { ...next[idx], name: e.target.value }
+                                return { ...c, variants: next }
+                              })}
+                              placeholder="如：5000mAh 红色"
+                              className="h-8 w-full border border-gray-200 bg-white rounded px-2 text-sm text-gray-900 outline-none focus:border-blue-500 mr-2"
+                            />
+                            <input
+                              type="number"
+                              value={v.price}
+                              onChange={(e) => setForm((c) => {
+                                const next = [...c.variants]
+                                next[idx] = { ...next[idx], price: e.target.value }
+                                return { ...c, variants: next }
+                              })}
+                              placeholder="0.00"
+                              className="h-8 w-full border border-gray-200 bg-white rounded px-2 text-sm text-gray-900 outline-none focus:border-blue-500 mr-2"
+                            />
+                            <input
+                              type="number"
+                              value={v.stock}
+                              onChange={(e) => setForm((c) => {
+                                const next = [...c.variants]
+                                next[idx] = { ...next[idx], stock: e.target.value }
+                                return { ...c, variants: next }
+                              })}
+                              placeholder="99"
+                              className="h-8 w-full border border-gray-200 bg-white rounded px-2 text-sm text-gray-900 outline-none focus:border-blue-500 mr-2"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setForm((c) => {
+                                const next = [...c.variants]
+                                next.splice(idx, 1)
+                                return { ...c, variants: next }
+                              })}
+                              className="h-8 w-8 flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                             >
-                              {spec}
-                            </span>
-                          ))}
+                              ×
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
-                  </label>
+
+                    <button
+                      type="button"
+                      onClick={() => setForm((c) => ({ ...c, variants: [...(c.variants || []), { ...EMPTY_VARIANT }] }))}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                    >
+                      + 添加规格
+                    </button>
+                  </div>
                 </div>
               </section>
             </div>

@@ -35,6 +35,7 @@ const STORAGE_KEYS = {
   session: 'giftcraft-session',
   cart: 'giftcraft-cart',
   cartToken: 'giftcraft-cart-token',
+  cartVariants: 'giftcraft-cart-variants',
 }
 
 function safeParseJSON(value, fallback) {
@@ -53,6 +54,11 @@ function loadSession() {
 function loadCart() {
   if (typeof window === 'undefined') return {}
   return safeParseJSON(window.localStorage.getItem(STORAGE_KEYS.cart), {})
+}
+
+function loadCartVariants() {
+  if (typeof window === 'undefined') return {}
+  return safeParseJSON(window.localStorage.getItem(STORAGE_KEYS.cartVariants), {})
 }
 
 function createCartToken() {
@@ -87,6 +93,7 @@ function AppProvider({ children }) {
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [catalogQuery, setCatalogQuery] = useState('')
   const [cart, setCart] = useState(loadCart)
+  const [cartVariants, setCartVariants] = useState(loadCartVariants)
   const [cartToken] = useState(loadCartToken)
   const [toasts, setToasts] = useState([])
   const [loadingAuth, setLoadingAuth] = useState(false)
@@ -128,6 +135,12 @@ function AppProvider({ children }) {
       window.localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(cart))
     }
   }, [cart])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(STORAGE_KEYS.cartVariants, JSON.stringify(cartVariants))
+    }
+  }, [cartVariants])
 
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true)
@@ -206,6 +219,10 @@ function AppProvider({ children }) {
   }, [pushToast])
 
   const addToCart = useCallback((product, quantity = 1, options = {}) => {
+    const { variant = null, sourceRect = null } = options
+    if (variant) {
+      setCartVariants((current) => ({ ...current, [product.id]: { name: variant.name, price: variant.price } }))
+    }
     setCart((current) => {
       const nextQty = Number(current[product.id] || 0) + quantity
       return {
@@ -229,7 +246,7 @@ function AppProvider({ children }) {
       window.dispatchEvent(
         new CustomEvent('giftcraft:cart-fly', {
           detail: {
-            sourceRect: options?.sourceRect || null,
+            sourceRect,
             product,
           },
         }),
@@ -239,6 +256,13 @@ function AppProvider({ children }) {
   }, [cartToken, pushToast])
 
   const updateCartQuantity = useCallback((productId, quantity) => {
+    if (quantity <= 0) {
+      setCartVariants((current) => {
+        const next = { ...current }
+        delete next[productId]
+        return next
+      })
+    }
     setCart((current) => {
       const next = { ...current }
       if (quantity <= 0) {
@@ -264,6 +288,7 @@ function AppProvider({ children }) {
 
   const clearCart = useCallback(() => {
     setCart({})
+    setCartVariants({})
     void api
       .delete('/cart', { headers: { 'X-Cart-Token': cartToken } })
       .then((response) => {
@@ -279,14 +304,18 @@ function AppProvider({ children }) {
       .map(([productId, quantity]) => {
         const product = products.find((item) => item.id === productId)
         if (!product) return null
+        const variant = cartVariants[productId] || null
+        const price = variant?.price ?? product.price
         return {
           ...product,
           quantity,
-          subtotal: Number(product.price || 0) * quantity,
+          variantName: variant?.name || null,
+          price,
+          subtotal: Number(price || 0) * quantity,
         }
       })
       .filter(Boolean)
-  }, [cart, products])
+  }, [cart, cartVariants, products])
 
   const cartCount = useMemo(
     () => cartItems.length,
@@ -314,6 +343,7 @@ function AppProvider({ children }) {
       catalogQuery,
       setCatalogQuery,
       cart,
+      cartVariants,
       cartItems,
       cartCount,
       cartTotal,
@@ -331,6 +361,7 @@ function AppProvider({ children }) {
     [
       addToCart,
       cart,
+      cartVariants,
       cartCount,
       cartItems,
       cartTotal,

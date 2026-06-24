@@ -13,6 +13,10 @@ export default function ProductDetailPage() {
   const existingQuantity = cartItems.find((item) => item.id === id)?.quantity || 0
   const [quantity, setQuantity] = useState('1')
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [selectedVariant, setSelectedVariant] = useState(null)
+
+  const hasVariants = Array.isArray(product?.variants) && product.variants.length > 0
+  const displayPrice = selectedVariant?.price ?? product?.price
 
   const allImages = useMemo(() => {
     if (!product) return []
@@ -121,8 +125,13 @@ export default function ProductDetailPage() {
                 </div>
                 <h1 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl lg:text-3xl">{product.name}</h1>
                 <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-blue-700">{formatCurrency(product.price)}</span>
-                  <span className="text-xs text-gray-400 line-through opacity-70">{(product.price * 1.2).toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-blue-700">{formatCurrency(displayPrice)}</span>
+                  {hasVariants && !selectedVariant && (
+                    <span className="text-sm font-medium text-gray-400">起</span>
+                  )}
+                  {!hasVariants && (
+                    <span className="text-xs text-gray-400 line-through opacity-70">{(displayPrice * 1.2).toFixed(2)}</span>
+                  )}
                 </div>
                 
                 <div className="mt-6 border-t border-gray-100 pt-6">
@@ -132,22 +141,30 @@ export default function ProductDetailPage() {
                   </p>
                 </div>
 
-                {product.specs && (
+                {hasVariants && (
                   <div className="mt-6 border-t border-gray-100 pt-6">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 opacity-70 mb-3">规格参数</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 opacity-70 mb-3">选择规格</h3>
                     <div className="flex flex-wrap gap-2">
-                      {product.specs
-                        .split(/[\n,，;；]/)
-                        .map((item) => item.trim())
-                        .filter(Boolean)
-                        .map((spec, index) => (
-                          <span
+                      {product.variants.map((variant, index) => {
+                        const isSelected = selectedVariant?.name === variant.name
+                        return (
+                          <button
                             key={index}
-                            className="inline-flex items-center rounded-lg bg-blue-50 border border-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                            type="button"
+                            onClick={() => setSelectedVariant(variant)}
+                            className={`inline-flex flex-col items-center rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                              isSelected
+                                ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-blue-400 hover:text-blue-600'
+                            }`}
                           >
-                            {spec}
-                          </span>
-                        ))}
+                            <span>{variant.name}</span>
+                            <span className={`mt-0.5 text-[10px] font-bold ${isSelected ? 'text-blue-600' : 'text-gray-400'}`}>
+                              {formatCurrency(variant.price)}
+                            </span>
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -187,10 +204,11 @@ export default function ProductDetailPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={(event) => addToCart(product, normalizedQuantity, { sourceRect: event.currentTarget.getBoundingClientRect() })}
-                    className="flex-1 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-6 text-sm font-medium text-white shadow-sm transition hover:bg-blue-800"
+                    disabled={hasVariants && !selectedVariant}
+                    onClick={(event) => addToCart(product, normalizedQuantity, { variant: selectedVariant, sourceRect: event.currentTarget.getBoundingClientRect() })}
+                    className="flex-1 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-6 text-sm font-medium text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    加入购物车
+                    {hasVariants && !selectedVariant ? '请先选择规格' : '加入购物车'}
                   </button>
                 </div>
               </div>
