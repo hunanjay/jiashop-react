@@ -3,7 +3,6 @@ import { Hero } from '../components/home/Hero';
 import { FeaturedCollections } from '../components/home/FeaturedCollections';
 import { CustomizerCTA } from '../components/home/CustomizerCTA';
 import { Testimonials } from '../components/home/Testimonials';
-import { Footer } from '../components/home/Footer';
 import { MobileNav } from '../components/home/MobileNav';
 
 // Local Assets
@@ -40,9 +39,9 @@ export default function HomePage() {
         <CustomizerCTA />
         <Testimonials testimonialImages={images.testimonials} />
       </main>
-      <Footer />
       <MobileNav />
     </div>
   );
 }
+
 
