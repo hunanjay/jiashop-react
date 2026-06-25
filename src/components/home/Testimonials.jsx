@@ -1,54 +1,79 @@
-import { Star } from 'lucide-react';
+import { Star } from 'lucide-react'
 
-export function Testimonials({ testimonialImages = {} }) {
-  const testimonials = [
-    {
-      name: '中国电信',
-      text: '"充电宝彩印的细节程度令人惊叹。这感觉就像是在赠送一件艺术品,而不仅仅是一份礼物。"',
-      image: testimonialImages.person1,
-    },
-    {
-      name: '清华大学',
-      text: '"我们的企业订单处理得非常精准。定制刻制完美匹配了我们品牌的奢华美学。"',
-      image: testimonialImages.person2,
-    },
-    {
-      name: '中信银行',
-      text: '"作为定制产品,物流速度出奇地快。包装本身就非常精美,甚至不需要额外的礼品纸。"',
-      image: testimonialImages.person3,
-    },
-  ];
+const testimonials = [
+  {
+    name: '中国电信',
+    role: '企业采购部',
+    text: '充电宝彩印的细节令人惊叹，交付的每一件都像是一件艺术品。',
+    image: 'https://www.chinatelecom.com.cn/ct/image/img/favicon.ico',
+  },
+  {
+    name: '清华大学',
+    role: '行政采购中心',
+    text: '企业订单处理精准高效，定制完美匹配了我们品牌的审美，超出预期。',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/e/ec/Tsinghua_University_Logo.svg',
+  },
+  {
+    name: '中信银行',
+    role: '品牌定制团队',
+    text: '物流速度出奇地快，包装本身已非常精美，合作体验五星好评。',
+    image: 'https://s1.aigei.com/src/img/png/c6/c644b94f9d1b4b69b5f3d4500452caf0.png?imageMogr2/auto-orient/thumbnail/!282x282r/gravity/Center/crop/282x282/quality/85/%7CimageView2/2/w/282&e=2051020800&token=P7S2Xpzfz11vAkASLTkfHN7Fw-oOZBecqeJaxypL:Ou4nF3r6kP_VSoZbjxJ5ecsjq-g=',
+  },
+]
 
+export function Testimonials() {
   return (
-    <section className="px-8 max-w-7xl mx-auto mb-32">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {testimonials.map((testimonial, index) => (
-          <div key={index} className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 space-y-6 flex flex-col justify-between">
-            <div className="space-y-6">
-              <div className="flex gap-1 text-amber-500">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-current" />
+    <section className="px-6 lg:px-10 pb-32 max-w-7xl mx-auto">
+      <div className="mb-10">
+        <h2 className="text-4xl font-bold tracking-tight text-zinc-900">客户评价</h2>
+        <p className="mt-2 text-sm text-zinc-400 font-medium">已服务 500+ 企业客户</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {testimonials.map((t, i) => (
+          <div
+            key={i}
+            className="glass-deep rounded-2xl p-7 flex flex-col justify-between gap-6 overflow-hidden transition-shadow duration-300 hover:shadow-[inset_0_2px_0_rgba(255,255,255,0.80),0_20px_60px_rgba(99,102,241,0.18),0_4px_16px_rgba(0,0,0,0.06)]"
+          >
+            {/* Refraction highlight */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-2xl"
+              style={{
+                background:
+                  'radial-gradient(ellipse 90% 50% at 15% 0%, rgba(255,255,255,0.44), transparent 55%)',
+              }}
+            />
+
+            <div className="relative space-y-4">
+              <div className="flex gap-0.5">
+                {Array.from({ length: 5 }).map((_, j) => (
+                  <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
                 ))}
               </div>
-              <p className="text-lg font-medium leading-relaxed italic text-gray-700">{testimonial.text}</p>
+              <p className="text-base text-zinc-700 leading-relaxed">
+                "{t.text}"
+              </p>
             </div>
-            <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
-              <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                <img
-                  alt={testimonial.name}
-                  className="w-full h-full object-cover"
-                  src={testimonial.image}
-                />
+
+            <div className="relative flex items-center gap-3 pt-4 border-t border-white/40">
+              <div className="glass w-10 h-10 rounded-full p-0.5 flex-shrink-0">
+                <div className="w-full h-full rounded-full bg-zinc-100 overflow-hidden flex items-center justify-center">
+                  <img
+                    src={t.image}
+                    alt={t.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-900">{testimonial.name}</p>
-                <p className="text-xs text-gray-500">{testimonial.role}</p>
+                <p className="text-sm font-semibold text-zinc-900">{t.name}</p>
+                <p className="text-xs text-zinc-400 font-medium">{t.role}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
     </section>
-  );
+  )
 }
-

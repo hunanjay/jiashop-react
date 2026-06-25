@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "./styles/home_theme.css";
 
 @theme {
@@ -7,7 +7,7 @@
   --color-input: #d1d5db;
   --color-ring: #1a56db;
   --radius: 0.5rem;
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Outfit', system-ui, sans-serif;
 }
 
 html,
@@ -18,9 +18,9 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
-  background: #f9fafb;
-  color: #111827;
+  font-family: 'Outfit', system-ui, sans-serif;
+  background: #fafafa;
+  color: #111111;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -66,7 +66,7 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #c7d2fe;
   border-radius: 999px;
 }
 
