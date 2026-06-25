@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Minus, Plus } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
 import { formatCurrency } from '../lib/format'
@@ -17,6 +17,7 @@ export default function ProductDetailPage() {
 
   const hasVariants = Array.isArray(product?.variants) && product.variants.length > 0
   const displayPrice = selectedVariant?.price ?? product?.price
+
 
   const allImages = useMemo(() => {
     if (!product) return []
@@ -56,7 +57,7 @@ export default function ProductDetailPage() {
     <div className="h-screen overflow-hidden bg-gray-50 text-gray-900">
       <FloatingCartButton />
       <div className="flex h-full flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col overflow-hidden">
+        <div className="flex w-full flex-1 flex-col overflow-hidden">
           <div className="mb-6 flex-shrink-0">
             <Link
               to="/catalog"
@@ -67,9 +68,9 @@ export default function ProductDetailPage() {
             </Link>
           </div>
 
-          <div className="grid min-h-0 flex-1 gap-10 overflow-hidden lg:grid-cols-[auto_1fr] lg:items-stretch">
-            <div className="flex flex-shrink-0 flex-col gap-5 overflow-hidden">
-              <div className="relative aspect-square max-h-[72vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+          <div className="grid min-h-0 flex-1 gap-10 overflow-hidden lg:grid-cols-2 lg:items-stretch">
+            <div className="flex flex-col gap-5 overflow-hidden">
+              <div className="relative aspect-square max-h-[72vh] overflow-hidden rounded-xl bg-[rgb(249,250,251)]">
                 <div 
                   className="flex h-full w-full transition-transform duration-600 ease-out"
                   style={{ transform: `translateX(-${activeImageIndex * 100}%)` }}
@@ -79,23 +80,39 @@ export default function ProductDetailPage() {
                       key={idx} 
                       src={src} 
                       alt={`${product.name}-${idx}`} 
-                      className="h-full w-full flex-shrink-0 object-contain bg-white" 
+                      className="h-full w-full flex-shrink-0 object-contain bg-[rgb(249,250,251)]"
                     />
                   ))}
                 </div>
                 
                 {allImages.length > 1 && (
-                  <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-gray-200/80 border border-gray-300 px-3 py-1.5">
-                    {allImages.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setActiveImageIndex(idx)}
-                        className={`h-1.5 rounded-full transition-all duration-300 ${
-                          idx === activeImageIndex ? 'w-4 bg-blue-700' : 'w-1.5 bg-gray-400'
-                        }`}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <button
+                      onClick={() => setActiveImageIndex((i) => Math.max(0, i - 1))}
+                      disabled={activeImageIndex === 0}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/80 shadow-sm transition hover:bg-white disabled:opacity-30"
+                    >
+                      <ChevronLeft className="h-4 w-4 text-gray-700" />
+                    </button>
+                    <button
+                      onClick={() => setActiveImageIndex((i) => Math.min(allImages.length - 1, i + 1))}
+                      disabled={activeImageIndex === allImages.length - 1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/80 shadow-sm transition hover:bg-white disabled:opacity-30"
+                    >
+                      <ChevronRight className="h-4 w-4 text-gray-700" />
+                    </button>
+                    <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-gray-200/80 border border-gray-300 px-3 py-1.5">
+                      {allImages.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setActiveImageIndex(idx)}
+                          className={`h-1.5 rounded-full transition-all duration-300 ${
+                            idx === activeImageIndex ? 'w-4 bg-blue-700' : 'w-1.5 bg-gray-400'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -119,20 +136,22 @@ export default function ProductDetailPage() {
             </div>
 
             <div className="flex min-h-0 flex-col gap-6 overflow-y-auto pr-2 scrollbar-hide">
-              <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm">
-                <div className="inline-flex h-6 items-center rounded-md bg-blue-50 px-2.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
-                  {product.category || '未分类'}
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="inline-flex h-6 items-center rounded-md bg-blue-50 px-2.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                    {product.category || '未分类'}
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-bold text-blue-700">{formatCurrency(displayPrice)}</span>
+                    {hasVariants && !selectedVariant && (
+                      <span className="text-sm font-medium text-gray-400">起</span>
+                    )}
+                    {!hasVariants && (
+                      <span className="text-xs text-gray-400 line-through opacity-70">{(displayPrice * 1.2).toFixed(2)}</span>
+                    )}
+                  </div>
                 </div>
-                <h1 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl lg:text-3xl">{product.name}</h1>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-blue-700">{formatCurrency(displayPrice)}</span>
-                  {hasVariants && !selectedVariant && (
-                    <span className="text-sm font-medium text-gray-400">起</span>
-                  )}
-                  {!hasVariants && (
-                    <span className="text-xs text-gray-400 line-through opacity-70">{(displayPrice * 1.2).toFixed(2)}</span>
-                  )}
-                </div>
+                <h1 className="mt-3 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl lg:text-3xl">{product.name}</h1>
                 
                 <div className="mt-6 border-t border-gray-100 pt-6">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 opacity-70">商品描述</h3>
@@ -143,25 +162,37 @@ export default function ProductDetailPage() {
 
                 {hasVariants && (
                   <div className="mt-6 border-t border-gray-100 pt-6">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 opacity-70 mb-3">选择规格</h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 opacity-70">选择规格</h3>
+                      {selectedVariant && (
+                        <span className="text-xs text-gray-500">{selectedVariant.name}</span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2">
                       {product.variants.map((variant, index) => {
                         const isSelected = selectedVariant?.name === variant.name
                         return (
                           <button
                             key={index}
                             type="button"
-                            onClick={() => setSelectedVariant(variant)}
-                            className={`inline-flex flex-col items-center rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                            title={variant.name.length > 15 ? variant.name : undefined}
+                            onClick={() => setSelectedVariant(isSelected ? null : variant)}
+                            className={`relative flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left transition-colors ${
                               isSelected
-                                ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20'
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-blue-400 hover:text-blue-600'
+                                ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-blue-400'
                             }`}
                           >
-                            <span>{variant.name}</span>
-                            <span className={`mt-0.5 text-[10px] font-bold ${isSelected ? 'text-blue-600' : 'text-gray-400'}`}>
+                            <span className="truncate whitespace-nowrap text-sm font-semibold max-w-[15ch]">
+                              {variant.name.length > 15 ? variant.name.slice(0, 15) + '…' : variant.name}
+                            </span>
+                            <span className={`ml-2 flex-shrink-0 text-xs font-medium ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>
                               {formatCurrency(variant.price)}
                             </span>
+                            {isSelected && (
+                              <span className="absolute bottom-0 right-0 inline-flex h-4 w-4 items-center justify-center rounded-tl-lg rounded-br-lg bg-blue-600 text-[9px] text-white">✓</span>
+                            )}
                           </button>
                         )
                       })}
@@ -170,46 +201,42 @@ export default function ProductDetailPage() {
                 )}
               </div>
 
-              <div className="mt-auto rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="mb-5 flex items-center justify-between">
-                  <span className="text-sm font-bold text-gray-900">立即订购</span>
-                  {existingQuantity > 0 && (
-                    <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                      购物车已有 {existingQuantity} 件
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="flex h-11 items-center rounded-lg border border-gray-300 bg-gray-50 p-1">
+              <div className="mt-auto rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 items-center rounded-lg border border-gray-300 bg-gray-50 p-1">
                     <button
                       type="button"
                       onClick={() => setQuantity(String(Math.max(1, normalizedQuantity - 1)))}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-500 transition hover:bg-white hover:shadow-sm"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-white hover:shadow-sm"
                     >
-                      <Minus className="h-3.5 w-3.5" />
+                      <Minus className="h-3 w-3" />
                     </button>
                     <input
                       value={quantity}
                       onChange={(event) => setQuantity(event.target.value.replace(/[^\d]/g, ''))}
-                      className="h-9 w-12 border-0 bg-transparent text-center text-sm font-bold text-gray-900 outline-none"
+                      className="h-7 w-10 border-0 bg-transparent text-center text-sm font-bold text-gray-900 outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => setQuantity(String(Math.min(99, normalizedQuantity + 1)))}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-500 transition hover:bg-white hover:shadow-sm"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-white hover:shadow-sm"
                     >
-                      <Plus className="h-3.5 w-3.5" />
+                      <Plus className="h-3 w-3" />
                     </button>
                   </div>
                   <button
                     type="button"
                     disabled={hasVariants && !selectedVariant}
                     onClick={(event) => addToCart(product, normalizedQuantity, { variant: selectedVariant, sourceRect: event.currentTarget.getBoundingClientRect() })}
-                    className="flex-1 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-6 text-sm font-medium text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex-1 inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {hasVariants && !selectedVariant ? '请先选择规格' : '加入购物车'}
                   </button>
+                  {existingQuantity > 0 && (
+                    <span className="flex-shrink-0 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                      已有 {existingQuantity} 件
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

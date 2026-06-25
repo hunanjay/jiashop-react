@@ -15,7 +15,7 @@ const EMPTY_FORM = {
   stock: 99,
   description: '',
   category: '',
-  image_url: '',
+  mainImages: [],
   images: [],
   variants: [],
 }
@@ -94,11 +94,11 @@ export default function ProductEditPage() {
         stock: Number(product.stock) || 99,
         description: product.description || '',
         category: product.category || '',
-        image_url: product.image_url || '',
+        mainImages: [product.image_url].filter(Boolean),
         images: product.images || [],
         variants: product.variants || [],
       })
-    } catch (err) {
+    } catch {
       pushToast('error', '加载失败', '无法获取商品信息')
       navigate(-1)
     } finally {
@@ -121,37 +121,20 @@ export default function ProductEditPage() {
     try {
       pushToast('info', '正在保存', '图片正在上传中...')
 
-      // 1. Upload base64 main image if needed
-      let finalImageUrl = form.image_url
-      if (finalImageUrl?.startsWith('data:')) {
-        const uploadRes = await api.post('/upload', { image: finalImageUrl })
-        finalImageUrl = uploadRes.data.key
+      const normalizeImg = async (img) => {
+        if (img.startsWith('data:')) {
+          const res = await api.post('/upload', { image: img })
+          return res.data.key
+        }
+        if (img.includes('/uploads/')) {
+          const parts = img.split('/uploads/')
+          return 'uploads/' + parts[1].split('?')[0]
+        }
+        return img
       }
 
-      // 2. Upload base64 gallery images if needed
-      let finalImages = [...(form.images || [])]
-      if (finalImages.length > 0) {
-        const uploaded = await Promise.all(
-          finalImages.map(async (img) => {
-            if (img.startsWith('data:')) {
-              const res = await api.post('/upload', { image: img })
-              return res.data.key
-            }
-            if (img.includes('/uploads/')) {
-              const parts = img.split('/uploads/')
-              return 'uploads/' + parts[1].split('?')[0]
-            }
-            return img
-          })
-        )
-        finalImages = uploaded
-      }
-
-      // Normalize main image key if it is a signed URL
-      if (finalImageUrl && finalImageUrl.includes('/uploads/')) {
-        const parts = finalImageUrl.split('/uploads/')
-        finalImageUrl = 'uploads/' + parts[1].split('?')[0]
-      }
+      const uploadedMain = await Promise.all((form.mainImages || []).map(normalizeImg))
+      const uploadedGallery = await Promise.all((form.images || []).map(normalizeImg))
 
       const cleanVariants = (form.variants || [])
         .filter((v) => v.name?.trim())
@@ -165,12 +148,13 @@ export default function ProductEditPage() {
         ? Math.min(...cleanVariants.map((v) => v.price))
         : Number(form.price) || 0
 
+      const { mainImages: _m, ...formRest } = form
       const finalPayload = {
-        ...form,
+        ...formRest,
         price: basePrice,
         stock: Number(form.stock) || 99,
-        image_url: finalImageUrl,
-        images: finalImages,
+        image_url: uploadedMain[0] || '',
+        images: [...uploadedMain.slice(1), ...uploadedGallery],
         variants: cleanVariants,
       }
 
@@ -191,36 +175,30 @@ export default function ProductEditPage() {
     }
   }
 
+  const updateMainImage = useCallback((index, val) => {
+    setForm((current) => {
+      const next = [...(current.mainImages || [])]
+      if (val === null) next.splice(index, 1)
+      else next[index] = val
+      return { ...current, mainImages: next }
+    })
+  }, [])
+
+  const addMainImage = useCallback((val) => {
+    setForm((current) => ({ ...current, mainImages: [...(current.mainImages || []), val] }))
+  }, [])
+
   const updateGalleryImage = useCallback((index, val) => {
     setForm((current) => {
       const next = [...(current.images || [])]
-      if (val === null) {
-        next.splice(index, 1)
-      } else {
-        next[index] = val
-      }
+      if (val === null) next.splice(index, 1)
+      else next[index] = val
       return { ...current, images: next }
     })
   }, [])
 
   const addGalleryImage = useCallback((val) => {
-    setForm((current) => {
-      const next = [...(current.images || [])]
-      return { ...current, images: [...next, val] }
-    })
-  }, [])
-
-  const moveGalleryImage = useCallback((e, index, direction) => {
-    e.stopPropagation()
-    setForm((current) => {
-      const next = [...(current.images || [])]
-      const targetIndex = index + direction
-      if (targetIndex < 0 || targetIndex >= next.length) return current
-      const temp = next[index]
-      next[index] = next[targetIndex]
-      next[targetIndex] = temp
-      return { ...current, images: next }
-    })
+    setForm((current) => ({ ...current, images: [...(current.images || []), val] }))
   }, [])
 
   const handlePasteImage = useCallback(async (event) => {
@@ -230,31 +208,24 @@ export default function ProductEditPage() {
     event.preventDefault()
     event.stopPropagation()
 
-    if (selectedPasteTarget === 'main') {
-      setForm((current) => ({ ...current, image_url: pastedImage }))
-      pushToast('success', '主图已选中', '已粘贴到主图位置')
-      return
-    }
-
-    if (typeof selectedPasteTarget === 'string' && selectedPasteTarget.startsWith('gallery-')) {
-      const suffix = selectedPasteTarget.slice('gallery-'.length)
-      if (suffix === 'new') {
-        addGalleryImage(pastedImage)
-        pushToast('success', '附图已选中', '已粘贴到新附图位置')
-        return
+    if (typeof selectedPasteTarget === 'string') {
+      if (selectedPasteTarget.startsWith('main-')) {
+        const suffix = selectedPasteTarget.slice('main-'.length)
+        if (suffix === 'new') { addMainImage(pastedImage); pushToast('success', '主图已添加'); return }
+        const idx = Number(suffix)
+        if (!Number.isNaN(idx)) { updateMainImage(idx, pastedImage); pushToast('success', `主图第 ${idx + 1} 张已替换`); return }
       }
-
-      const index = Number(suffix)
-      if (!Number.isNaN(index)) {
-        updateGalleryImage(index, pastedImage)
-        pushToast('success', '附图已选中', `已粘贴到第 ${index + 1} 张附图`)
-        return
+      if (selectedPasteTarget.startsWith('gallery-')) {
+        const suffix = selectedPasteTarget.slice('gallery-'.length)
+        if (suffix === 'new') { addGalleryImage(pastedImage); pushToast('success', '附图已添加'); return }
+        const idx = Number(suffix)
+        if (!Number.isNaN(idx)) { updateGalleryImage(idx, pastedImage); pushToast('success', `附图第 ${idx + 1} 张已替换`); return }
       }
     }
 
-    setForm((current) => ({ ...current, image_url: pastedImage }))
-    pushToast('success', '主图已选中', '已粘贴到主图位置')
-  }, [addGalleryImage, pushToast, selectedPasteTarget, updateGalleryImage])
+    addMainImage(pastedImage)
+    pushToast('success', '图片已添加到主图')
+  }, [addMainImage, addGalleryImage, pushToast, selectedPasteTarget, updateMainImage, updateGalleryImage])
 
   if (loading) {
     return (
@@ -514,61 +485,91 @@ export default function ProductEditPage() {
                 <h3 className="text-sm font-semibold tracking-wider text-gray-900">商品图片</h3>
               </header>
 
-              <div className="grid gap-6 xl:grid-cols-[250px_1fr]">
-                {/* Main Image column */}
+              <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+                {/* 主图 */}
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">主图</h4>
-                    <span className="rounded bg-blue-50 border border-blue-200 px-2 py-0.5 text-[9px] font-medium text-blue-700">800×800</span>
+                    <h4 className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">主图 ({(form.mainImages || []).length})</h4>
+                    <span className="text-[9px] text-gray-400">第一张为封面</span>
                   </div>
-                  <div
-                    className={`rounded-xl p-1 border border-gray-200 bg-white shadow-sm transition-all ${selectedPasteTarget === 'main' ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-500/20' : ''}`}
-                  >
-                    <ImageCardUploader
-                      value={form.image_url}
-                      aspectRatio={1}
-                      outputWidth={800}
-                      outputHeight={800}
-                      enablePaste={false}
-                      onActivate={() => setSelectedPasteTarget('main')}
-                      onChange={(val) => {
-                        setSelectedPasteTarget('main')
-                        setForm((c) => ({ ...c, image_url: val }))
-                      }}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    {(form.mainImages || []).map((img, idx) => (
+                      <div
+                        key={idx}
+                        draggable={true}
+                        onDragStart={(e) => { e.dataTransfer.setData('sourceIndex', idx.toString()); e.currentTarget.classList.add('opacity-50', 'scale-95') }}
+                        onDragEnd={(e) => e.currentTarget.classList.remove('opacity-50', 'scale-95')}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          const src = parseInt(e.dataTransfer.getData('sourceIndex'))
+                          if (src === idx) return
+                          const next = [...(form.mainImages || [])]
+                          const [moved] = next.splice(src, 1)
+                          next.splice(idx, 0, moved)
+                          setForm((c) => ({ ...c, mainImages: next }))
+                        }}
+                        className={`relative group cursor-grab active:cursor-grabbing rounded-xl border bg-white overflow-hidden transition-all ${selectedPasteTarget === `main-${idx}` ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-200 hover:border-blue-400'}`}
+                      >
+                        {idx === 0 && <span className="absolute top-1.5 left-1.5 z-10 rounded px-1.5 py-0.5 text-[9px] font-bold bg-blue-600 text-white">封面</span>}
+                        <ImageCardUploader
+                          value={img}
+                          aspectRatio={1}
+                          outputWidth={800}
+                          outputHeight={800}
+                          enablePaste={false}
+                          onActivate={() => setSelectedPasteTarget(`main-${idx}`)}
+                          onChange={(val) => { setSelectedPasteTarget(`main-${idx}`); updateMainImage(idx, val) }}
+                          className="space-y-0"
+                        />
+                      </div>
+                    ))}
+                    <div className={`relative group rounded-xl overflow-hidden border bg-white transition-all ${selectedPasteTarget === 'main-new' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-dashed border-gray-200 hover:border-blue-400'}`}>
+                      <ImageCardUploader
+                        value={null}
+                        aspectRatio={1}
+                        outputWidth={800}
+                        outputHeight={800}
+                        enablePaste={false}
+                        onActivate={() => setSelectedPasteTarget('main-new')}
+                        onChange={(val) => { setSelectedPasteTarget('main-new'); addMainImage(val) }}
+                        onFilesSelect={(vals) => {
+                          setSelectedPasteTarget('main-new')
+                          const filtered = vals.filter(Boolean)
+                          if (filtered.length) setForm((c) => ({ ...c, mainImages: [...(c.mainImages || []), ...filtered] }))
+                        }}
+                        multiple={true}
+                        className="space-y-0"
+                      />
+                    </div>
                   </div>
-                  <p className="text-[9px] text-gray-400">支持点击上传或剪贴板直接粘贴图片</p>
+                  <p className="text-[9px] text-gray-400">支持粘贴或拖拽排序</p>
                 </section>
 
-                {/* Secondary Images column */}
+                {/* 附图 */}
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">附图 ({(form.images || []).length})</h4>
                     <span className="text-[9px] font-medium text-gray-400 uppercase tracking-wider">3:4</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-3">
                     {(form.images || []).map((img, idx) => (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         draggable={true}
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('sourceIndex', idx.toString())
-                          e.currentTarget.classList.add('opacity-50', 'scale-95')
-                        }}
-                        onDragEnd={(e) => {
-                          e.currentTarget.classList.remove('opacity-50', 'scale-95')
-                        }}
+                        onDragStart={(e) => { e.dataTransfer.setData('sourceIndex', idx.toString()); e.currentTarget.classList.add('opacity-50', 'scale-95') }}
+                        onDragEnd={(e) => e.currentTarget.classList.remove('opacity-50', 'scale-95')}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => {
                           e.preventDefault()
-                          const sourceIdx = parseInt(e.dataTransfer.getData('sourceIndex'))
-                          if (sourceIdx === idx) return
+                          const src = parseInt(e.dataTransfer.getData('sourceIndex'))
+                          if (src === idx) return
                           const next = [...(form.images || [])]
-                          const [moved] = next.splice(sourceIdx, 1)
+                          const [moved] = next.splice(src, 1)
                           next.splice(idx, 0, moved)
-                          setForm(c => ({ ...c, images: next }))
+                          setForm((c) => ({ ...c, images: next }))
                         }}
-                        className={`relative group cursor-grab active:cursor-grabbing transition-all hover:border-blue-500 rounded-xl border border-gray-200 bg-white overflow-hidden ${selectedPasteTarget === `gallery-${idx}` ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50' : ''}`}
+                        className={`relative group cursor-grab active:cursor-grabbing rounded-xl border bg-white overflow-hidden transition-all ${selectedPasteTarget === `gallery-${idx}` ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-200 hover:border-blue-400'}`}
                       >
                         <ImageCardUploader
                           value={img}
@@ -577,43 +578,29 @@ export default function ProductEditPage() {
                           outputHeight={1067}
                           enablePaste={false}
                           onActivate={() => setSelectedPasteTarget(`gallery-${idx}`)}
-                          onChange={(val) => {
-                            setSelectedPasteTarget(`gallery-${idx}`)
-                            updateGalleryImage(idx, val)
-                          }}
+                          onChange={(val) => { setSelectedPasteTarget(`gallery-${idx}`); updateGalleryImage(idx, val) }}
                           className="space-y-0"
                         />
                       </div>
                     ))}
-                    {true && (
-                      <div
-                        className={`relative group rounded-xl overflow-hidden border border-gray-200 bg-white transition-all ${selectedPasteTarget === 'gallery-new' ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50' : ''}`}
-                      >
-                        <ImageCardUploader
-                          value={null}
-                          aspectRatio={3 / 4}
-                          outputWidth={800}
-                          outputHeight={1067}
-                          enablePaste={false}
-                          onActivate={() => setSelectedPasteTarget('gallery-new')}
-                          onChange={(val) => {
-                            setSelectedPasteTarget('gallery-new')
-                            addGalleryImage(val)
-                          }}
-                          onFilesSelect={(vals) => {
-                            setSelectedPasteTarget('gallery-new')
-                            const filtered = vals.filter(Boolean)
-                            if (!filtered.length) return
-                            setForm((current) => {
-                              const currentImages = current.images || []
-                              return { ...current, images: [...currentImages, ...filtered] }
-                            })
-                          }}
-                          multiple={true}
-                          className="space-y-0"
-                        />
-                      </div>
-                    )}
+                    <div className={`relative group rounded-xl overflow-hidden border bg-white transition-all ${selectedPasteTarget === 'gallery-new' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-dashed border-gray-200 hover:border-blue-400'}`}>
+                      <ImageCardUploader
+                        value={null}
+                        aspectRatio={3 / 4}
+                        outputWidth={800}
+                        outputHeight={1067}
+                        enablePaste={false}
+                        onActivate={() => setSelectedPasteTarget('gallery-new')}
+                        onChange={(val) => { setSelectedPasteTarget('gallery-new'); addGalleryImage(val) }}
+                        onFilesSelect={(vals) => {
+                          setSelectedPasteTarget('gallery-new')
+                          const filtered = vals.filter(Boolean)
+                          if (filtered.length) setForm((c) => ({ ...c, images: [...(c.images || []), ...filtered] }))
+                        }}
+                        multiple={true}
+                        className="space-y-0"
+                      />
+                    </div>
                   </div>
                   <p className="text-[9px] text-gray-400">点击卡片粘贴或按住拖拽排序</p>
                 </section>

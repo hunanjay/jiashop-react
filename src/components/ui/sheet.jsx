@@ -25,6 +25,13 @@ const sheetSideClasses = {
   right: 'inset-y-0 right-0 h-full w-full max-w-[560px] rounded-l-xl border-l',
 }
 
+const slideAnimations = {
+  top: 'data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top',
+  bottom: 'data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom',
+  left: 'data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left',
+  right: 'data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
+}
+
 const SheetContent = React.forwardRef(({ side = 'right', className, children, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
@@ -34,7 +41,7 @@ const SheetContent = React.forwardRef(({ side = 'right', className, children, ..
         'fixed z-50 overflow-hidden border border-gray-200 bg-white text-gray-900 shadow-xl outline-none',
         'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:duration-300',
         'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
-        'data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
+        slideAnimations[side] || slideAnimations.right,
         sheetSideClasses[side] || sheetSideClasses.right,
         className,
       )}
