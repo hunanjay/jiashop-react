@@ -131,6 +131,16 @@ function AppProvider({ children }) {
   }, [pushToast])
 
   useEffect(() => {
+    const handleServerError = (e) => {
+      const status = e.detail?.status
+      const detail = status ? `错误代码 ${status}，请稍后重试或联系管理员` : '请稍后重试或联系管理员'
+      pushToast('error', '系统出现问题', detail)
+    }
+    window.addEventListener('giftcraft:server-error', handleServerError)
+    return () => window.removeEventListener('giftcraft:server-error', handleServerError)
+  }, [pushToast])
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(cart))
     }

@@ -8,6 +8,15 @@ function emitSessionExpired(reason = 'session-expired') {
   window.dispatchEvent(new CustomEvent('giftcraft:session-expired', { detail: { reason } }))
 }
 
+let lastServerErrorAt = 0
+function emitServerError(status) {
+  if (typeof window === 'undefined') return
+  const now = Date.now()
+  if (now - lastServerErrorAt < 5000) return
+  lastServerErrorAt = now
+  window.dispatchEvent(new CustomEvent('giftcraft:server-error', { detail: { status } }))
+}
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
 })
@@ -34,6 +43,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     const status = error.response?.status
+
+    if (status >= 500) {
+      emitServerError(status)
+    }
 
     if (status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true
