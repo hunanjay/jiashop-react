@@ -58,7 +58,7 @@ export async function normalizeOrientation(imageSrc) {
         reader.readAsDataURL(blob)
       },
       'image/jpeg',
-      0.92,
+      0.97,
     )
   })
 }
@@ -82,9 +82,9 @@ export async function getCroppedImg(imageSrc, pixelCrop, options = {}) {
   rotCtx.rotate(rad)
   rotCtx.drawImage(image, -image.width / 2, -image.height / 2)
 
-  // Step 2: crop the rotated canvas to the desired output size
-  const outW = options.outputWidth || Math.round(pixelCrop.width)
-  const outH = options.outputHeight || Math.round(pixelCrop.height)
+  // Step 2: crop the rotated canvas — use natural crop size, not a forced resize
+  const outW = Math.round(pixelCrop.width)
+  const outH = Math.round(pixelCrop.height)
 
   const canvas = document.createElement('canvas')
   canvas.width = outW
@@ -102,9 +102,9 @@ export async function getCroppedImg(imageSrc, pixelCrop, options = {}) {
       reader.readAsDataURL(blob)
     }
     canvas.toBlob(
-      (blob) => { blob ? toDataUrl(blob) : canvas.toBlob(toDataUrl, 'image/jpeg', 0.88) },
+      (blob) => { blob ? toDataUrl(blob) : canvas.toBlob(toDataUrl, 'image/jpeg', 0.97) },
       'image/webp',
-      0.82,
+      0.97,
     )
   })
 }

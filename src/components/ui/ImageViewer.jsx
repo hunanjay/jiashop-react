@@ -12,6 +12,7 @@ function Viewer({ images, initialIndex, onClose }) {
   const [dragging, setDragging] = useState(false)
   const dragStart = useRef(null)
   const containerRef = useRef(null)
+  const touchStart = useRef(null)
 
   const clampOffset = useCallback((ox, oy, currentZoom) => {
     if (!containerRef.current) return { x: ox, y: oy }
@@ -100,6 +101,23 @@ function Viewer({ images, initialIndex, onClose }) {
     }
   }
 
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() }
+    }
+  }
+
+  const handleTouchEnd = (e) => {
+    if (!touchStart.current || zoom > 1) return
+    const dx = e.changedTouches[0].clientX - touchStart.current.x
+    const dy = e.changedTouches[0].clientY - touchStart.current.y
+    const dt = Date.now() - touchStart.current.time
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50 && dt < 400) {
+      goTo(dx < 0 ? index + 1 : index - 1)
+    }
+    touchStart.current = null
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
@@ -151,6 +169,8 @@ function Viewer({ images, initialIndex, onClose }) {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onDoubleClick={handleDoubleClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <img
           src={images[index]}
