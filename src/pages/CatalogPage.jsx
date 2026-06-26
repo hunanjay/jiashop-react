@@ -87,7 +87,7 @@ function FilterPanel({
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: '全部', value: 'all' },
-            { label: '★ 主推', value: 'featured' },
+            { label: '主推', value: 'featured' },
             { label: '促销', value: 'promotion' },
           ].map((item) => (
             <button
@@ -284,7 +284,12 @@ export default function CatalogPage() {
 
         return true
       })
-      .sort((left, right) => Number(right.sales_count || 0) - Number(left.sales_count || 0))
+      .sort((left, right) => {
+        const leftScore = (left.is_featured ? 2 : 0) + (left.is_promotion ? 1 : 0)
+        const rightScore = (right.is_featured ? 2 : 0) + (right.is_promotion ? 1 : 0)
+        if (rightScore !== leftScore) return rightScore - leftScore
+        return Number(right.sales_count || 0) - Number(left.sales_count || 0)
+      })
   }, [activeCategory, brandQuery, catalogQuery, priceFilter, tagFilter, products])
 
   const clearFilters = () => {
