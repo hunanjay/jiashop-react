@@ -3,6 +3,7 @@ import { Edit3, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 
 import { api } from '../../lib/api'
 import { getApiErrorMessage } from '../../lib/api-error'
+import { ImageViewer } from '../../components/ui/ImageViewer'
 import { useApp } from '../../lib/app-context'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -66,6 +67,9 @@ export default function OrdersPage({ scope = 'admin' }) {
   const [detailOrder, setDetailOrder] = useState(null)
   const [timeline, setTimeline] = useState([])
   const [noteDraft, setNoteDraft] = useState('')
+  const [viewerImages, setViewerImages] = useState([])
+  const [viewerIndex, setViewerIndex] = useState(0)
+  const [viewerOpen, setViewerOpen] = useState(false)
   const [statusUpdatingId, setStatusUpdatingId] = useState(null)
 
   const loadOrders = useCallback(async () => {
@@ -808,7 +812,12 @@ export default function OrdersPage({ scope = 'admin' }) {
                   {Array.isArray(detailOrder.effect_images) && detailOrder.effect_images.length ? (
                     <div className="grid gap-3 sm:grid-cols-2">
                       {detailOrder.effect_images.map((image, index) => (
-                        <div key={`${detailOrder.id}-${index}`} className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100" style={{ aspectRatio: 3 / 4 }}>
+                        <div
+                          key={`${detailOrder.id}-${index}`}
+                          className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100 cursor-zoom-in"
+                          style={{ aspectRatio: 3 / 4 }}
+                          onClick={() => { setViewerImages(detailOrder.effect_images); setViewerIndex(index); setViewerOpen(true) }}
+                        >
                           <img src={image} alt={`效果图 ${index + 1}`} className="h-full w-full object-cover" />
                         </div>
                       ))}
@@ -842,6 +851,13 @@ export default function OrdersPage({ scope = 'admin' }) {
           </ModalBody>
         </ModalContent>
       </Modal>
+
+      <ImageViewer
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
     </div>
   )
 }

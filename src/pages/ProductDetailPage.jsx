@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react'
 import { useApp } from '../lib/app-context'
 import { formatCurrency } from '../lib/format'
 import { FloatingCartButton } from '../components/cart/FloatingCartButton'
+import { ImageViewer } from '../components/ui/ImageViewer'
 
 export default function ProductDetailPage() {
   const id = useParams().id
@@ -14,6 +15,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState('1')
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [selectedVariant, setSelectedVariant] = useState(null)
+  const [viewerOpen, setViewerOpen] = useState(false)
 
   const hasVariants = Array.isArray(product?.variants) && product.variants.length > 0
   const displayPrice = selectedVariant?.price ?? product?.price
@@ -71,15 +73,16 @@ export default function ProductDetailPage() {
           <div className="grid min-h-0 flex-1 gap-10 overflow-hidden lg:grid-cols-2 lg:items-stretch">
             <div className="flex flex-col gap-5 overflow-hidden">
               <div className="relative aspect-square max-h-[72vh] overflow-hidden rounded-xl bg-[rgb(249,250,251)]">
-                <div 
-                  className="flex h-full w-full transition-transform duration-600 ease-out"
+                <div
+                  className="flex h-full w-full transition-transform duration-600 ease-out cursor-zoom-in"
                   style={{ transform: `translateX(-${activeImageIndex * 100}%)` }}
+                  onClick={() => setViewerOpen(true)}
                 >
                   {allImages.map((src, idx) => (
-                    <img 
-                      key={idx} 
-                      src={src} 
-                      alt={`${product.name}-${idx}`} 
+                    <img
+                      key={idx}
+                      src={src}
+                      alt={`${product.name}-${idx}`}
                       className="h-full w-full flex-shrink-0 object-contain bg-[rgb(249,250,251)]"
                     />
                   ))}
@@ -243,6 +246,12 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+      <ImageViewer
+        images={allImages}
+        initialIndex={activeImageIndex}
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
     </div>
   )
 }
