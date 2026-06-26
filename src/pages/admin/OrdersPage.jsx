@@ -245,6 +245,9 @@ export default function OrdersPage({ scope = 'admin' }) {
           if (typeof image === 'string' && image.startsWith('data:')) {
             const uploadRes = await api.post('/upload', { image })
             uploadedImages.push(uploadRes.data.key)
+          } else if (typeof image === 'string' && image.includes('/uploads/')) {
+            const parts = image.split('/uploads/')
+            uploadedImages.push('uploads/' + parts[1].split('?')[0])
           } else if (image) {
             uploadedImages.push(image)
           }
