@@ -18,6 +18,8 @@ const EMPTY_FORM = {
   mainImages: [],
   images: [],
   variants: [],
+  is_featured: false,
+  is_promotion: false,
 }
 
 const EMPTY_VARIANT = { name: '', price: '', stock: '' }
@@ -97,6 +99,8 @@ export default function ProductEditPage() {
         mainImages: [product.image_url].filter(Boolean),
         images: product.images || [],
         variants: product.variants || [],
+        is_featured: Boolean(product.is_featured),
+        is_promotion: Boolean(product.is_promotion),
       })
     } catch {
       pushToast('error', '加载失败', '无法获取商品信息')
@@ -401,6 +405,36 @@ export default function ProductEditPage() {
                       placeholder="请输入商品描述"
                     />
                   </label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setForm((c) => ({ ...c, is_featured: !c.is_featured }))}
+                      className={`flex items-center justify-between rounded-lg border px-4 py-3 text-left transition ${form.is_featured ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+                    >
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">主推商品</div>
+                        <div className="mt-0.5 text-xs text-gray-400">标记为重点推广商品</div>
+                      </div>
+                      <div className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${form.is_featured ? 'bg-amber-500' : 'bg-gray-200'}`}>
+                        <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${form.is_featured ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setForm((c) => ({ ...c, is_promotion: !c.is_promotion }))}
+                      className={`flex items-center justify-between rounded-lg border px-4 py-3 text-left transition ${form.is_promotion ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+                    >
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">促销商品</div>
+                        <div className="mt-0.5 text-xs text-gray-400">参与促销活动的商品</div>
+                      </div>
+                      <div className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${form.is_promotion ? 'bg-red-500' : 'bg-gray-200'}`}>
+                        <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${form.is_promotion ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </div>
+                    </button>
+                  </div>
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">

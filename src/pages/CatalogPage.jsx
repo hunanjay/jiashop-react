@@ -39,6 +39,8 @@ function FilterPanel({
   setPriceOpen,
   categoryOpen,
   setCategoryOpen,
+  tagFilter,
+  setTagFilter,
 }) {
   return (
     <div className="space-y-4">
@@ -64,6 +66,7 @@ function FilterPanel({
           priceFilter !== 'all' ? { type: 'price', label: `价格: ${PRICE_FILTERS.find((item) => item.value === priceFilter)?.label}` } : null,
           brandQuery.trim() ? { type: 'brand', label: `分类搜索: ${brandQuery.trim()}` } : null,
           catalogQuery.trim() ? { type: 'globalSearch', label: `关键词: ${catalogQuery.trim()}` } : null,
+          tagFilter !== 'all' ? { type: 'tag', label: tagFilter === 'featured' ? '★ 主推' : '促销' } : null,
         ]
           .filter(Boolean)
           .map((chip) => (
@@ -77,6 +80,35 @@ function FilterPanel({
               <X className="h-3 w-3" />
             </button>
           ))}
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <p className="mb-3 text-sm font-semibold text-gray-900">标签</p>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: '全部', value: 'all' },
+            { label: '★ 主推', value: 'featured' },
+            { label: '促销', value: 'promotion' },
+          ].map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setTagFilter(item.value)}
+              className={[
+                'rounded-lg border px-2 py-2 text-xs font-semibold transition',
+                tagFilter === item.value
+                  ? item.value === 'featured'
+                    ? 'border-amber-400 bg-amber-50 text-amber-700'
+                    : item.value === 'promotion'
+                      ? 'border-red-400 bg-red-50 text-red-700'
+                      : 'border-blue-700 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50',
+              ].join(' ')}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -189,12 +221,14 @@ export default function CatalogPage() {
   const [priceFilter, setPriceFilter] = useState('all')
   const [priceOpen, setPriceOpen] = useState(true)
   const [categoryOpen, setCategoryOpen] = useState(true)
+  const [tagFilter, setTagFilter] = useState('all')
 
   const activeFilterCount = [
     activeCategory !== 'all',
     priceFilter !== 'all',
     brandQuery.trim().length > 0,
     catalogQuery.trim().length > 0,
+    tagFilter !== 'all',
   ].filter(Boolean).length
 
   const availableCategories = useMemo(() => {
@@ -245,16 +279,20 @@ export default function CatalogPage() {
         if (priceFilter === '50-150' && !(price >= 50 && price < 150)) return false
         if (priceFilter === '150+' && !(price >= 150)) return false
 
+        if (tagFilter === 'featured' && !product.is_featured) return false
+        if (tagFilter === 'promotion' && !product.is_promotion) return false
+
         return true
       })
       .sort((left, right) => Number(right.sales_count || 0) - Number(left.sales_count || 0))
-  }, [activeCategory, brandQuery, catalogQuery, priceFilter, products])
+  }, [activeCategory, brandQuery, catalogQuery, priceFilter, tagFilter, products])
 
   const clearFilters = () => {
     setActiveCategory('all')
     setBrandQuery('')
     setPriceFilter('all')
     setCatalogQuery('')
+    setTagFilter('all')
   }
 
   const removeFilter = (type) => {
@@ -262,6 +300,7 @@ export default function CatalogPage() {
     if (type === 'brand') setBrandQuery('')
     if (type === 'price') setPriceFilter('all')
     if (type === 'globalSearch') setCatalogQuery('')
+    if (type === 'tag') setTagFilter('all')
   }
 
   const filterProps = {
@@ -282,6 +321,8 @@ export default function CatalogPage() {
     setPriceOpen,
     categoryOpen,
     setCategoryOpen,
+    tagFilter,
+    setTagFilter,
   }
 
   return (
@@ -377,7 +418,7 @@ export default function CatalogPage() {
                     className="overflow-hidden rounded-xl border border-gray-200 bg-white"
                   >
                     <div className="animate-pulse bg-gray-100" style={{ aspectRatio: CARD_IMAGE_ASPECT }} />
-                    <div className="space-y-3 px-3 py-3">
+                    <div className="space-y-3 px-4 py-4">
                       <div className="h-4 w-24 rounded-md bg-gray-200" />
                       <div className="h-6 w-3/4 rounded-md bg-gray-200" />
                     </div>
@@ -393,15 +434,30 @@ export default function CatalogPage() {
                       to={`/catalog/${product.id}`}
                       className="group overflow-hidden rounded-xl border border-gray-200 bg-white transition duration-300 hover:border-blue-700 hover:shadow-md"
                     >
-                      <div className="overflow-hidden bg-gray-50" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
+                      <div className="relative overflow-hidden bg-gray-50" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
                         <img
                           src={product.image_url}
                           alt={product.name}
                           className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                         />
+                        {(product.is_featured || product.is_promotion) && (
+                          <div className="absolute left-2.5 top-2.5 flex flex-col gap-1">
+                            {product.is_featured && (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500 px-3 py-1.5 text-sm font-bold tracking-wide text-white shadow">
+                                ★ 主推
+                              </span>
+                            )}
+                            {product.is_promotion && (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-red-500 px-3 py-1.5 text-sm font-bold tracking-wide text-white shadow">
+                                ◆ 促销
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="border-t border-gray-100 px-3 py-2">
-                        <div className="truncate text-sm font-medium tracking-tight text-gray-900">{product.name}</div>
+                      <div className="border-t border-gray-100 px-4 py-3">
+                        <div className="truncate text-base font-semibold tracking-tight text-gray-900">{product.name}</div>
+                        <div className="mt-1 text-sm font-medium text-blue-700">¥{Number(product.price).toLocaleString()}</div>
                       </div>
                     </Link>
                   )

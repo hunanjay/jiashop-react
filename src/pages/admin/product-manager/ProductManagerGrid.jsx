@@ -43,8 +43,20 @@ export default function ProductManagerGrid({ products, loading, canEditProduct, 
             className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition duration-150 hover:shadow-md"
           >
             <div className="relative overflow-hidden bg-slate-100" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
-              <div className="absolute left-2 top-2 z-10 rounded-md bg-white/95 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-blue-700 border border-gray-200 shadow-xs">
-                {product.category || 'Uncategorized'}
+              <div className="absolute left-2 top-2 z-10 flex flex-col gap-1">
+                <div className="rounded-md bg-white/95 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-blue-700 border border-gray-200 shadow-xs">
+                  {product.category || 'Uncategorized'}
+                </div>
+                {product.is_featured && (
+                  <div className="rounded-md bg-amber-500/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-white shadow-xs">
+                    主推
+                  </div>
+                )}
+                {product.is_promotion && (
+                  <div className="rounded-md bg-red-500/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-white shadow-xs">
+                    促销
+                  </div>
+                )}
               </div>
               <div className="absolute right-2 top-2 z-10 flex items-center gap-2">
                 {editable ? (
