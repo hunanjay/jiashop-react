@@ -28,8 +28,6 @@ function FilterPanel({
   setActiveCategory,
   priceFilter,
   setPriceFilter,
-  brandQuery,
-  setBrandQuery,
   catalogQuery,
   activeFilterCount,
   availableCategories,
@@ -37,13 +35,120 @@ function FilterPanel({
   removeFilter,
   priceOpen,
   setPriceOpen,
-  categoryOpen,
-  setCategoryOpen,
   tagFilter,
   setTagFilter,
 }) {
   return (
     <div className="space-y-4">
+      <div className="py-1">
+        <p className="mb-2.5 text-sm font-semibold text-gray-900">分类</p>
+        <ul className="space-y-1">
+          {availableCategories.map((item) => (
+            <li key={item.value}>
+              <button
+                type="button"
+                onClick={() => setActiveCategory(item.value)}
+                className={[
+                  'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-all duration-150',
+                  activeCategory === item.value
+                    ? 'bg-blue-50 text-blue-700 font-semibold'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                ].join(' ')}
+              >
+                <span>{item.label}</span>
+                <span
+                  className={[
+                    'text-xs font-normal',
+                    activeCategory === item.value ? 'text-blue-600 font-medium' : 'text-gray-400',
+                  ].join(' ')}
+                >
+                  {item.value !== 'all'
+                    ? products.filter((p) => p.category === item.value).length
+                    : products.length}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 py-1">
+        {/* 标签 */}
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-gray-900">标签</p>
+          <div className="flex flex-col gap-1.5">
+            {[
+              { label: '全部', value: 'all' },
+              { label: '主推', value: 'featured' },
+              { label: '促销', value: 'promotion' },
+            ].map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setTagFilter(item.value)}
+                className={[
+                  'w-full rounded-lg border px-2.5 py-1.5 text-left text-xs font-semibold transition-all duration-150',
+                  tagFilter === item.value
+                    ? item.value === 'featured'
+                      ? 'border-amber-400 bg-amber-50 text-amber-700'
+                      : item.value === 'promotion'
+                        ? 'border-red-400 bg-red-50 text-red-700'
+                        : 'border-blue-700 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50',
+                ].join(' ')}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 价格 */}
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-gray-900">价格</p>
+          <div className="flex flex-col gap-1.5">
+            {PRICE_FILTERS.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setPriceFilter(item.value)}
+                className={[
+                  'w-full rounded-lg border px-2.5 py-1.5 text-left text-xs font-semibold transition-all duration-150',
+                  priceFilter === item.value
+                    ? 'border-blue-700 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50',
+                ].join(' ')}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {activeFilterCount > 0 && (
+        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+          {[
+            activeCategory !== 'all' ? { type: 'category', label: `分类: ${activeCategory}` } : null,
+            priceFilter !== 'all' ? { type: 'price', label: `价格: ${PRICE_FILTERS.find((item) => item.value === priceFilter)?.label}` } : null,
+            catalogQuery.trim() ? { type: 'globalSearch', label: `关键词: ${catalogQuery.trim()}` } : null,
+            tagFilter !== 'all' ? { type: 'tag', label: tagFilter === 'featured' ? '★ 主推' : '促销' } : null,
+          ]
+            .filter(Boolean)
+            .map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => removeFilter(chip.type)}
+                className="inline-flex items-center gap-2 rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700 transition hover:bg-blue-100"
+              >
+                {chip.label}
+                <X className="h-3 w-3" />
+              </button>
+            ))}
+        </div>
+      )}
+
       <button
         type="button"
         onClick={clearFilters}
@@ -59,187 +164,23 @@ function FilterPanel({
           </span>
         ) : null}
       </button>
-
-      <div className="flex flex-wrap gap-2">
-        {[
-          activeCategory !== 'all' ? { type: 'category', label: `分类: ${activeCategory}` } : null,
-          priceFilter !== 'all' ? { type: 'price', label: `价格: ${PRICE_FILTERS.find((item) => item.value === priceFilter)?.label}` } : null,
-          brandQuery.trim() ? { type: 'brand', label: `分类搜索: ${brandQuery.trim()}` } : null,
-          catalogQuery.trim() ? { type: 'globalSearch', label: `关键词: ${catalogQuery.trim()}` } : null,
-          tagFilter !== 'all' ? { type: 'tag', label: tagFilter === 'featured' ? '★ 主推' : '促销' } : null,
-        ]
-          .filter(Boolean)
-          .map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={() => removeFilter(chip.type)}
-              className="inline-flex items-center gap-2 rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700 transition hover:bg-blue-100"
-            >
-              {chip.label}
-              <X className="h-3 w-3" />
-            </button>
-          ))}
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <p className="mb-3 text-sm font-semibold text-gray-900">标签</p>
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: '全部', value: 'all' },
-            { label: '主推', value: 'featured' },
-            { label: '促销', value: 'promotion' },
-          ].map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() => setTagFilter(item.value)}
-              className={[
-                'rounded-lg border px-2 py-2 text-xs font-semibold transition',
-                tagFilter === item.value
-                  ? item.value === 'featured'
-                    ? 'border-amber-400 bg-amber-50 text-amber-700'
-                    : item.value === 'promotion'
-                      ? 'border-red-400 bg-red-50 text-red-700'
-                      : 'border-blue-700 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50',
-              ].join(' ')}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <button
-          type="button"
-          onClick={() => setPriceOpen((current) => !current)}
-          className="flex w-full items-center justify-between gap-3 text-left"
-        >
-          <span className="text-sm font-semibold text-gray-900">价格</span>
-          {priceOpen ? (
-            <ChevronUp className="h-4 w-4 text-gray-500" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-gray-500" />
-          )}
-        </button>
-
-        {priceOpen ? (
-          <div className="mt-4 grid gap-2">
-            {PRICE_FILTERS.map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => setPriceFilter(item.value)}
-                className={[
-                  'rounded-lg border px-4 py-3 text-left text-sm transition',
-                  priceFilter === item.value
-                    ? 'border-blue-700 bg-blue-50 text-blue-700 font-medium'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50',
-                ].join(' ')}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <button
-          type="button"
-          onClick={() => setCategoryOpen((current) => !current)}
-          className="flex w-full items-center justify-between gap-3 text-left"
-        >
-          <span className="text-sm font-semibold text-gray-900">分类</span>
-          {categoryOpen ? (
-            <ChevronUp className="h-4 w-4 text-gray-500" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-gray-500" />
-          )}
-        </button>
-
-        {categoryOpen ? (
-          <>
-            <div className="relative mt-4">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                value={brandQuery}
-                onChange={(event) => setBrandQuery(event.target.value)}
-                placeholder="搜索分类或关键词"
-                className="h-11 w-full rounded-lg border border-gray-300 bg-white pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-              />
-            </div>
-
-            <div className="mt-4 space-y-2">
-              {availableCategories.map((item) => {
-                const active = activeCategory === item.value
-                return (
-                  <button
-                    key={item.value}
-                    type="button"
-                    onClick={() => setActiveCategory(item.value)}
-                    className={[
-                      'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition',
-                      active
-                        ? 'border-blue-700 bg-blue-50 text-blue-700 font-medium'
-                        : 'border-gray-200 bg-white text-gray-950 hover:border-gray-300 hover:bg-gray-50',
-                    ].join(' ')}
-                  >
-                    <span
-                      className={[
-                        'inline-flex h-4 w-4 items-center justify-center rounded-[5px] border text-[10px]',
-                        active
-                          ? 'border-blue-700 bg-blue-700 text-white'
-                          : 'border-gray-300 bg-gray-50 text-transparent',
-                      ].join(' ')}
-                    >
-                      ✓
-                    </span>
-                    <span className="flex-1 text-sm">{item.label}</span>
-                    <span className="text-xs text-gray-500">
-                      {item.value === 'all'
-                        ? products.length
-                        : products.filter((product) => product.category === item.value).length}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </>
-        ) : null}
-      </div>
     </div>
   )
 }
 
 export default function CatalogPage() {
-  const { products, loadingProducts, catalogQuery, setCatalogQuery } = useApp()
+  const { products, loadingProducts, catalogQuery, setCatalogQuery, categoryOptions } = useApp()
   const [activeCategory, setActiveCategory] = useState('all')
-  const [brandQuery, setBrandQuery] = useState('')
   const [priceFilter, setPriceFilter] = useState('all')
   const [priceOpen, setPriceOpen] = useState(true)
-  const [categoryOpen, setCategoryOpen] = useState(true)
   const [tagFilter, setTagFilter] = useState('all')
 
   const activeFilterCount = [
     activeCategory !== 'all',
     priceFilter !== 'all',
-    brandQuery.trim().length > 0,
     catalogQuery.trim().length > 0,
     tagFilter !== 'all',
   ].filter(Boolean).length
-
-  const availableCategories = useMemo(() => {
-    return [
-      { label: '全部分类', value: 'all' },
-      ...Array.from(new Set(products.map((product) => product.category).filter(Boolean))).map((name) => ({
-        label: name,
-        value: name,
-      })),
-    ]
-  }, [products])
 
   const productRows = useMemo(() => {
     return products
@@ -263,17 +204,6 @@ export default function CatalogPage() {
           return false
         }
 
-        if (brandQuery.trim()) {
-          const needle = brandQuery.trim().toLowerCase()
-          const haystack = [product.category, product.name, product.customization?.type]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
-          if (!haystack.includes(needle)) {
-            return false
-          }
-        }
-
         const price = Number(product.price || 0)
         if (priceFilter === '0-50' && !(price < 50)) return false
         if (priceFilter === '50-150' && !(price >= 50 && price < 150)) return false
@@ -290,11 +220,10 @@ export default function CatalogPage() {
         if (rightScore !== leftScore) return rightScore - leftScore
         return Number(right.sales_count || 0) - Number(left.sales_count || 0)
       })
-  }, [activeCategory, brandQuery, catalogQuery, priceFilter, tagFilter, products])
+  }, [activeCategory, catalogQuery, priceFilter, tagFilter, products])
 
   const clearFilters = () => {
     setActiveCategory('all')
-    setBrandQuery('')
     setPriceFilter('all')
     setCatalogQuery('')
     setTagFilter('all')
@@ -302,7 +231,6 @@ export default function CatalogPage() {
 
   const removeFilter = (type) => {
     if (type === 'category') setActiveCategory('all')
-    if (type === 'brand') setBrandQuery('')
     if (type === 'price') setPriceFilter('all')
     if (type === 'globalSearch') setCatalogQuery('')
     if (type === 'tag') setTagFilter('all')
@@ -314,18 +242,14 @@ export default function CatalogPage() {
     setActiveCategory,
     priceFilter,
     setPriceFilter,
-    brandQuery,
-    setBrandQuery,
     catalogQuery,
     setCatalogQuery,
     activeFilterCount,
-    availableCategories,
+    availableCategories: categoryOptions,
     clearFilters,
     removeFilter,
     priceOpen,
     setPriceOpen,
-    categoryOpen,
-    setCategoryOpen,
     tagFilter,
     setTagFilter,
   }
@@ -462,7 +386,8 @@ export default function CatalogPage() {
                       </div>
                       <div className="border-t border-gray-100 px-4 py-3">
                         <div className="truncate text-base font-semibold tracking-tight text-gray-900">{product.name}</div>
-                        <div className="mt-1 text-sm font-medium text-blue-700">¥{Number(product.price).toLocaleString()}</div>
+                        <div className="mt-1 truncate text-xs text-gray-500">{product.description}</div>
+                        <div className="mt-1.5 text-sm font-medium text-blue-700">¥{Number(product.price).toLocaleString()}</div>
                       </div>
                     </Link>
                   )

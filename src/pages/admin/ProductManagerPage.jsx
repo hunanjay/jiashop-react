@@ -25,7 +25,7 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   const [categorySaving, setCategorySaving] = useState(false)
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [activeCategory, setActiveCategory] = useState('All Products')
+  const [activeCategory, setActiveCategory] = useState('全部商品')
   const [saving, setSaving] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
@@ -45,41 +45,33 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   const canDeleteProduct = canEditProduct
 
   const tabs = useMemo(() => {
-    const uniqueCategories = Array.from(new Set(visibleProducts.map((product) => product.category).filter(Boolean)))
+    const categoryItems =
+      categoryCatalog.length > 0
+        ? categoryCatalog.filter((c) => c.active).sort((a, b) => a.sort_order - b.sort_order)
+        : Array.from(new Set(visibleProducts.map((p) => p.category).filter(Boolean))).map((name) => ({ name }))
+
     return [
       {
-        label: 'All Products',
-        value: 'All Products',
+        label: '全部商品',
+        value: '全部商品',
         count: visibleProducts.length,
       },
-      {
-        label: 'Most Purchased',
-        value: 'Most Purchased',
-        count: visibleProducts.filter((product) => Number(product.sales_count || 0) > 0).length,
-      },
-      ...uniqueCategories.map((category) => ({
-        label: category,
-        value: category,
-        count: visibleProducts.filter((product) => product.category === category).length,
+      ...categoryItems.map((category) => ({
+        label: category.name,
+        value: category.name,
+        count: visibleProducts.filter((p) => p.category === category.name).length,
       })),
     ]
-  }, [visibleProducts])
+  }, [categoryCatalog, visibleProducts])
 
   const filteredProducts = useMemo(() => {
-    const next = visibleProducts.filter((product) => {
+    return visibleProducts.filter((product) => {
       const matchesSearch = matchesProductQuery(product, search)
       const matchesCategory =
-        activeCategory === 'All Products' ||
-        activeCategory === 'Most Purchased' ||
+        activeCategory === '全部商品' ||
         product.category === activeCategory
       return matchesSearch && matchesCategory
     })
-
-    if (activeCategory === 'Most Purchased') {
-      return [...next].sort((left, right) => Number(right.sales_count || 0) - Number(left.sales_count || 0))
-    }
-
-    return next
   }, [activeCategory, search, visibleProducts])
 
   const refreshVisibleProducts = useCallback(async () => {
@@ -243,19 +235,56 @@ export default function ProductManagerPage({ scope = 'admin' }) {
         onCreate={openCreateDrawer}
       />
 
-      <div className="space-y-6">
-        <ProductManagerGrid
-          products={filteredProducts}
-          loading={scope === 'workspace' ? workspaceLoading : false}
-          canEditProduct={canEditProduct}
-          canDeleteProduct={canDeleteProduct}
-          onEdit={openEditDrawer}
-          onDelete={requestDeleteProduct}
-          onReset={() => {
-            setSearch('')
-            setActiveCategory('All Products')
-          }}
-        />
+      <div className="grid gap-6 md:grid-cols-[200px_1fr]">
+        {/* 左侧分类侧边栏 (Vertical Category Sidebar) */}
+        <aside className="space-y-2 py-1">
+          <p className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">分类</p>
+          <ul className="space-y-1">
+            {tabs.map((item) => {
+              const active = activeCategory === item.value
+              return (
+                <li key={item.value}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory(item.value)}
+                    className={[
+                      'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-all duration-150',
+                      active
+                        ? 'bg-blue-50 text-blue-700 font-semibold'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                    ].join(' ')}
+                  >
+                    <span className="truncate">{item.label}</span>
+                    <span
+                      className={[
+                        'text-xs font-normal px-2 py-0.5 rounded-full',
+                        active ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500',
+                      ].join(' ')}
+                    >
+                      {item.count}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </aside>
+
+        {/* 右侧商品管理列表 (Products Grid) */}
+        <main className="space-y-6">
+          <ProductManagerGrid
+            products={filteredProducts}
+            loading={scope === 'workspace' ? workspaceLoading : false}
+            canEditProduct={canEditProduct}
+            canDeleteProduct={canDeleteProduct}
+            onEdit={openEditDrawer}
+            onDelete={requestDeleteProduct}
+            onReset={() => {
+              setSearch('')
+              setActiveCategory('全部商品')
+            }}
+          />
+        </main>
       </div>
 
       {canManageCategoryDictionary ? (

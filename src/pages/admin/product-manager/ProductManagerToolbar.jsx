@@ -64,38 +64,6 @@ export default function ProductManagerToolbar({
           </div>
         </div>
       </div>
-
-      <div className="relative px-4 py-3 sm:px-5">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {tabs.slice(0, 5).map((item) => {
-            const active = activeCategory === item.value
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => setActiveCategory(item.value)}
-                className={[
-                  'inline-flex min-w-max items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition',
-                  active
-                    ? 'border-blue-700 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-900',
-                ].join(' ')}
-              >
-                {item.label}
-                <Badge
-                  variant="outline"
-                  className={[
-                    'rounded-full px-2 py-0.5 text-[11px]',
-                    active ? 'border-blue-200 bg-blue-100 text-blue-800' : 'border-gray-200 bg-gray-100 text-gray-500',
-                  ].join(' ')}
-                >
-                  {item.count}
-                </Badge>
-              </button>
-            )
-          })}
-        </div>
-      </div>
     </div>
   )
 }
