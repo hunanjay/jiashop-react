@@ -3,7 +3,7 @@ import { Hero } from '../components/home/Hero'
 import { FeaturedCollections } from '../components/home/FeaturedCollections'
 import { Testimonials } from '../components/home/Testimonials'
 import { MobileNav } from '../components/home/MobileNav'
-import { Footer } from '../components/home/Footer'
+import { CustomProcess } from '../components/home/CustomProcess'
 
 import heroImage from './admin/images/hero.png'
 import imgMouse from './admin/images/鼠标.jpeg'
@@ -36,35 +36,8 @@ export default function HomePage() {
             basket: imgPowerBank,
           }}
         />
-        <Testimonials />
-
-        {/* Cooperative Brands Section */}
-        <section className="px-6 lg:px-10 pb-32 max-w-7xl mx-auto">
-          <div className="mb-10">
-            <h2 className="text-4xl font-bold tracking-tight text-zinc-900">合作伙伴</h2>
-            <p className="mt-2 text-sm text-zinc-400 font-medium">已服务 500+ 企业及机构客户</p>
-          </div>
-
-          <div className="glass-deep rounded-2xl p-8 md:p-12 flex justify-center items-center overflow-hidden transition-all duration-300 hover:shadow-[inset_0_2px_0_rgba(255,255,255,0.80),0_20px_60px_rgba(99,102,241,0.18),0_4px_16px_rgba(0,0,0,0.06)]">
-            {/* Refraction highlight */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 rounded-2xl"
-              style={{
-                background:
-                  'radial-gradient(ellipse 90% 50% at 15% 0%, rgba(255,255,255,0.44), transparent 55%)',
-              }}
-            />
-
-            <img
-              src={imgCoopBrand}
-              alt="合作品牌"
-              className="w-full max-w-5xl h-auto object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 relative z-10"
-            />
-          </div>
-        </section>
-
-        <Footer />
+        <CustomProcess />
+        <Testimonials imgCoopBrand={imgCoopBrand} />
       </main>
       <MobileNav />
     </div>
