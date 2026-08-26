@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-
 import { AppContext } from './lib/app-context'
 import { api, setAuthToken } from './lib/api'
 import { getApiErrorMessage } from './lib/api-error'
+import { Toaster } from './components/ui/toaster'
 import AdminLayout from './layouts/AdminLayout'
 import ClientLayout from './layouts/ClientLayout'
 import LoginPage from './pages/LoginPage'
@@ -413,6 +414,7 @@ function AppProvider({ children }) {
   return (
     <AppContext.Provider value={value}>
       {children}
+      <Toaster />
     </AppContext.Provider>
   )
 }

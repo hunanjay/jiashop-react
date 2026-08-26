@@ -1,5 +1,7 @@
 import axios from 'axios'
 
+import { getApiErrorMessage } from './api-error'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api'
 let refreshPromise = null
 
@@ -9,12 +11,12 @@ function emitSessionExpired(reason = 'session-expired') {
 }
 
 let lastServerErrorAt = 0
-function emitServerError(status) {
+function emitServerError(status, message) {
   if (typeof window === 'undefined') return
   const now = Date.now()
-  if (now - lastServerErrorAt < 5000) return
+  if (now - lastServerErrorAt < 2000) return
   lastServerErrorAt = now
-  window.dispatchEvent(new CustomEvent('giftcraft:server-error', { detail: { status } }))
+  window.dispatchEvent(new CustomEvent('giftcraft:server-error', { detail: { status, message } }))
 }
 
 export const api = axios.create({
@@ -44,8 +46,8 @@ api.interceptors.response.use(
     const originalRequest = error.config
     const status = error.response?.status
 
-    if (status >= 500) {
-      emitServerError(status)
+    if (status !== 401) {
+      emitServerError(status, getApiErrorMessage(error))
     }
 
     if (status === 401 && originalRequest && !originalRequest._retry) {
