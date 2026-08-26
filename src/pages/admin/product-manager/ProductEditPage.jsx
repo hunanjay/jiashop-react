@@ -6,6 +6,7 @@ import { Textarea } from '../../../components/ui/textarea'
 import { ImageCardUploader } from '../../../components/ui/ImageCardUploader'
 import { useApp } from '../../../lib/app-context'
 import { api } from '../../../lib/api'
+import { getApiErrorMessage } from '../../../lib/api-error'
 import { extractClipboardImage } from '../../../lib/clipboard-image'
 import { ArrowLeft, Save, Globe } from 'lucide-react'
 
@@ -96,7 +97,9 @@ export default function ProductEditPage() {
         stock: Number(product.stock) || 99,
         description: product.description || '',
         category: product.category || '',
-        mainImages: [product.image_url].filter(Boolean),
+        mainImages: (product.main_images && product.main_images.length)
+          ? product.main_images
+          : [product.image_url].filter(Boolean),
         images: product.images || [],
         variants: product.variants || [],
         is_featured: Boolean(product.is_featured),
@@ -145,7 +148,7 @@ export default function ProductEditPage() {
         .map((v) => ({
           name: v.name.trim(),
           price: Number(v.price) || 0,
-          stock: Number(v.stock) || 0,
+          stock: v.stock === '' ? 99 : Number(v.stock) || 0,
         }))
 
       const basePrice = cleanVariants.length > 0
@@ -157,8 +160,8 @@ export default function ProductEditPage() {
         ...formRest,
         price: basePrice,
         stock: Number(form.stock) || 99,
-        image_url: uploadedMain[0] || '',
-        images: [...uploadedMain.slice(1), ...uploadedGallery],
+        main_images: uploadedMain,
+        images: uploadedGallery,
         variants: cleanVariants,
       }
 
@@ -173,7 +176,7 @@ export default function ProductEditPage() {
       navigate(-1)
     } catch (err) {
       console.error('Save failed:', err)
-      pushToast('error', '存档失败', '请检查网络或数据格式')
+      pushToast('error', '存档失败', getApiErrorMessage(err, '请检查网络或数据格式'))
     } finally {
       setSaving(false)
     }

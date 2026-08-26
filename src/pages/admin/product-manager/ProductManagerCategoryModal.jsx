@@ -128,11 +128,19 @@ export default function ProductManagerCategoryModal({
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+                <div className="mt-4 grid gap-3 md:grid-cols-[1fr_100px_auto]">
                   <Input
                     value={newCategoryName}
                     onChange={(event) => setNewCategoryName(event.target.value)}
                     placeholder="输入新类型名称"
+                    className="border-gray-300 bg-white text-gray-900 rounded-lg focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                  <Input
+                    type="number"
+                    value={newCategorySort}
+                    onChange={(event) => setNewCategorySort(event.target.value)}
+                    placeholder="排序"
+                    title="展示顺序，数字越小越靠前"
                     className="border-gray-300 bg-white text-gray-900 rounded-lg focus:border-blue-500 focus:ring-blue-500/20"
                   />
                   <Button
@@ -155,7 +163,7 @@ export default function ProductManagerCategoryModal({
 
                 {selectedCategory ? (
                   <div className="mt-4 space-y-4">
-                    <div className="grid gap-3 md:grid-cols-1">
+                    <div className="grid gap-3 md:grid-cols-[1fr_120px]">
                       <Input
                         value={selectedDraft?.name || ''}
                         onChange={(event) =>
@@ -165,6 +173,19 @@ export default function ProductManagerCategoryModal({
                           }))
                         }
                         placeholder="类型名称"
+                        className="border-gray-300 bg-white text-gray-900 rounded-lg focus:border-blue-500 focus:ring-blue-500/20"
+                      />
+                      <Input
+                        type="number"
+                        value={selectedDraft?.sort_order ?? 0}
+                        onChange={(event) =>
+                          setCategoryDrafts((current) => ({
+                            ...current,
+                            [selectedCategory.id]: { ...selectedDraft, sort_order: event.target.value },
+                          }))
+                        }
+                        placeholder="排序"
+                        title="展示顺序，数字越小越靠前"
                         className="border-gray-300 bg-white text-gray-900 rounded-lg focus:border-blue-500 focus:ring-blue-500/20"
                       />
                     </div>

@@ -4,6 +4,7 @@ import { Crop, Minus, Plus, RotateCcw, RotateCw, Check, Loader2, X } from 'lucid
 import { Modal, ModalContent, ModalTitle, ModalHeader, ModalBody, ModalFooter } from './modal'
 import { Button } from './button'
 import { getCroppedImg } from '../../lib/crop-image'
+import { useApp } from '../../lib/app-context'
 
 const ZOOM_PRESETS = [
   { label: '1×', value: 1 },
@@ -27,6 +28,7 @@ export function ImageCropper({
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
   const [processing, setProcessing] = useState(false)
   const processingRef = useRef(false)
+  const { pushToast } = useApp()
 
   const onCropCompleteHandler = useCallback((_, pixels) => {
     setCroppedAreaPixels(pixels)
@@ -50,6 +52,7 @@ export function ImageCropper({
       onClose()
     } catch (err) {
       console.error('裁剪失败:', err)
+      pushToast('error', '裁剪失败', '图片处理出错，请重试')
     } finally {
       processingRef.current = false
       setProcessing(false)

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3, Package, ReceiptText, ShieldCheck, Users } from 'lucide-react'
+import { BarChart3, Eye, Package, ReceiptText, ShieldCheck, Users } from 'lucide-react'
 
 import { useApp } from '../../lib/app-context'
 import { api } from '../../lib/api'
@@ -122,6 +122,7 @@ export default function DashboardPage({ scope = 'admin' }) {
       { label: '订单数', value: stats?.orders ?? visibleOrders.length, icon: ReceiptText },
       { label: '客户数', value: stats?.customers ?? customers.length, icon: Users },
       { label: '总销售额', value: formatCurrency(stats?.sales_total ?? visibleOrders.reduce((sum, item) => sum + Number(item.total_price || 0), 0)), icon: ShieldCheck },
+      ...(stats?.visits ? [{ label: '客户访问量', value: stats.visits.total_pv, icon: Eye }] : []),
     ],
     [customers.length, isWorkspace, products.length, stats, visibleOrders, workspaceProducts.length],
   )
@@ -144,6 +145,9 @@ export default function DashboardPage({ scope = 'admin' }) {
     stats?.customer_summary || {
       owner_distribution: [{ username: session?.username || 'Me', count: customers.length }],
     }
+
+  const visits = stats?.visits || null
+  const visitPeak = Math.max(1, ...(visits?.daily_trend || []).map((item) => Number(item.pv || 0)))
 
   const ownerNameById = (ownerId) => users.find((user) => user.id === ownerId)?.username || session?.username || ownerId || '未归属'
 
@@ -231,6 +235,35 @@ export default function DashboardPage({ scope = 'admin' }) {
           </CardContent>
         </Card>
 
+        {visits ? (
+          <Card className="bg-white border border-gray-200 rounded-xl shadow-sm text-gray-900">
+            <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
+              <CardTitle className="text-base font-semibold text-gray-900">客户访问量（近 7 天）</CardTitle>
+              <Badge variant="secondary" className="gap-1 bg-gray-100 text-gray-800 hover:bg-gray-200">
+                <Eye className="h-3.5 w-3.5" />
+                按设备去重
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-2 p-4 pt-2">
+              <div className="grid grid-cols-2 gap-2">
+                <PanelItem label="今日访问" value={visits.today_pv} />
+                <PanelItem label="今日设备" value={visits.today_uv} />
+                <PanelItem label="累计访问" value={visits.total_pv} />
+                <PanelItem label="累计设备" value={visits.total_uv} />
+              </div>
+              {visits.daily_trend.map((item) => (
+                <TrendBar
+                  key={item.label}
+                  label={item.label}
+                  value={item.pv}
+                  ratio={item.pv / visitPeak}
+                  hint={`${item.pv} 次 · ${item.uv} 台设备`}
+                />
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Card className="bg-white border border-gray-200 rounded-xl shadow-sm text-gray-900">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-base font-semibold text-gray-900">客户归属分布</CardTitle>
@@ -257,16 +290,14 @@ function PanelItem({ label, value }) {
   )
 }
 
-function TrendBar({ label, value, sales }) {
-  const width = Math.min(100, Math.max(8, value * 14))
+function TrendBar({ label, value, sales, ratio, hint }) {
+  const width = ratio == null ? Math.min(100, Math.max(8, value * 14)) : Math.min(100, Math.max(6, ratio * 100))
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium text-gray-700">{label}</span>
-        <span className="text-gray-500">
-          {value} 单 · {formatCurrency(sales)}
-        </span>
+        <span className="text-gray-500">{hint ?? `${value} 单 · ${formatCurrency(sales)}`}</span>
       </div>
       <div className="h-2 rounded-lg bg-gray-100">
         <div className="h-2 rounded-lg bg-blue-600 transition-all" style={{ width: `${width}%` }} />

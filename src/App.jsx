@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 
 import { AppContext } from './lib/app-context'
 import { api, setAuthToken } from './lib/api'
 import { getApiErrorMessage } from './lib/api-error'
+import { getDeviceId } from './lib/device'
+import { Toaster } from './components/ui/toaster'
 import AdminLayout from './layouts/AdminLayout'
 import ClientLayout from './layouts/ClientLayout'
 import LoginPage from './pages/LoginPage'
@@ -51,14 +53,30 @@ function loadSession() {
   return safeParseJSON(window.localStorage.getItem(STORAGE_KEYS.session), null)
 }
 
-function loadCart() {
-  if (typeof window === 'undefined') return {}
-  return safeParseJSON(window.localStorage.getItem(STORAGE_KEYS.cart), {})
+// A cart line is identified by product + variant, so the same product added
+// under two different variants stays two separate lines.
+function cartLineKey(productId, variantName) {
+  return `${productId}::${variantName || ''}`
 }
 
-function loadCartVariants() {
+function loadCart() {
   if (typeof window === 'undefined') return {}
-  return safeParseJSON(window.localStorage.getItem(STORAGE_KEYS.cartVariants), {})
+  const stored = safeParseJSON(window.localStorage.getItem(STORAGE_KEYS.cart), {})
+  const variants = safeParseJSON(window.localStorage.getItem(STORAGE_KEYS.cartVariants), {})
+  // Migrate the legacy `{productId: quantity}` shape (one variant per
+  // product, held in a side map) into keyed line objects.
+  return Object.entries(stored).reduce((acc, [key, value]) => {
+    if (value && typeof value === 'object') {
+      acc[key] = value
+      return acc
+    }
+    const quantity = Number(value || 0)
+    if (quantity > 0) {
+      const variantName = variants[key]?.name || ''
+      acc[cartLineKey(key, variantName)] = { productId: key, variantName, quantity }
+    }
+    return acc
+  }, {})
 }
 
 function createCartToken() {
@@ -81,7 +99,12 @@ function toCartObject(items) {
   return (items || []).reduce((acc, item) => {
     const quantity = Number(item?.quantity || 0)
     if (item?.product_id && quantity > 0) {
-      acc[item.product_id] = quantity
+      const variantName = item.variant_name || ''
+      acc[cartLineKey(item.product_id, variantName)] = {
+        productId: item.product_id,
+        variantName,
+        quantity,
+      }
     }
     return acc
   }, {})
@@ -92,8 +115,8 @@ function AppProvider({ children }) {
   const [products, setProducts] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [catalogQuery, setCatalogQuery] = useState('')
+  const [catalogFilters, setCatalogFilters] = useState({ category: 'all', price: 'all', tag: 'all', page: 1 })
   const [cart, setCart] = useState(loadCart)
-  const [cartVariants, setCartVariants] = useState(loadCartVariants)
   const [cartToken] = useState(loadCartToken)
   const [toasts, setToasts] = useState([])
   const [loadingAuth, setLoadingAuth] = useState(false)
@@ -133,8 +156,8 @@ function AppProvider({ children }) {
   useEffect(() => {
     const handleServerError = (e) => {
       const status = e.detail?.status
-      const detail = status ? `错误代码 ${status}，请稍后重试或联系管理员` : '请稍后重试或联系管理员'
-      pushToast('error', '系统出现问题', detail)
+      const message = e.detail?.message || (status ? `错误代码 ${status}` : '网络异常，请检查后端服务是否已启动')
+      pushToast('error', '请求失败', message)
     }
     window.addEventListener('giftcraft:server-error', handleServerError)
     return () => window.removeEventListener('giftcraft:server-error', handleServerError)
@@ -145,12 +168,6 @@ function AppProvider({ children }) {
       window.localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(cart))
     }
   }, [cart])
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEYS.cartVariants, JSON.stringify(cartVariants))
-    }
-  }, [cartVariants])
 
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true)
@@ -230,20 +247,19 @@ function AppProvider({ children }) {
 
   const addToCart = useCallback((product, quantity = 1, options = {}) => {
     const { variant = null, sourceRect = null } = options
-    if (variant) {
-      setCartVariants((current) => ({ ...current, [product.id]: { name: variant.name, price: variant.price } }))
-    }
+    const variantName = variant?.name || ''
+    const lineKey = cartLineKey(product.id, variantName)
     setCart((current) => {
-      const nextQty = Number(current[product.id] || 0) + quantity
+      const nextQty = Number(current[lineKey]?.quantity || 0) + quantity
       return {
         ...current,
-        [product.id]: Math.max(0, nextQty),
+        [lineKey]: { productId: product.id, variantName, quantity: Math.max(0, nextQty) },
       }
     })
     void api
       .post(
         '/cart/items',
-        { product_id: product.id, quantity },
+        { product_id: product.id, variant_name: variantName, quantity },
         { headers: { 'X-Cart-Token': cartToken } },
       )
       .then((response) => {
@@ -265,27 +281,22 @@ function AppProvider({ children }) {
     pushToast('success', '已加入购物车', product.name)
   }, [cartToken, pushToast])
 
-  const updateCartQuantity = useCallback((productId, quantity) => {
-    if (quantity <= 0) {
-      setCartVariants((current) => {
-        const next = { ...current }
-        delete next[productId]
-        return next
-      })
-    }
+  const updateCartQuantity = useCallback((lineKey, quantity) => {
+    const line = cart[lineKey]
+    if (!line) return
     setCart((current) => {
       const next = { ...current }
       if (quantity <= 0) {
-        delete next[productId]
+        delete next[lineKey]
       } else {
-        next[productId] = quantity
+        next[lineKey] = { ...line, quantity }
       }
       return next
     })
     void api
       .put(
-        `/cart/items/${productId}`,
-        { quantity },
+        `/cart/items/${line.productId}`,
+        { quantity, variant_name: line.variantName || '' },
         { headers: { 'X-Cart-Token': cartToken } },
       )
       .then((response) => {
@@ -294,11 +305,10 @@ function AppProvider({ children }) {
       .catch(() => {
         pushToast('error', '购物车同步失败', '请稍后重试')
       })
-  }, [cartToken, pushToast])
+  }, [cart, cartToken, pushToast])
 
   const clearCart = useCallback(() => {
     setCart({})
-    setCartVariants({})
     void api
       .delete('/cart', { headers: { 'X-Cart-Token': cartToken } })
       .then((response) => {
@@ -311,21 +321,27 @@ function AppProvider({ children }) {
 
   const cartItems = useMemo(() => {
     return Object.entries(cart)
-      .map(([productId, quantity]) => {
+      .map(([lineKey, line]) => {
+        const { productId, variantName, quantity } = line || {}
         const product = products.find((item) => item.id === productId)
         if (!product) return null
-        const variant = cartVariants[productId] || null
+        // Resolve the variant price from the product itself so an admin's
+        // price edit is reflected, instead of a stale copy in localStorage.
+        const variant = variantName
+          ? (product.variants || []).find((entry) => entry.name === variantName)
+          : null
         const price = variant?.price ?? product.price
         return {
           ...product,
+          lineKey,
           quantity,
-          variantName: variant?.name || null,
+          variantName: variantName || null,
           price,
           subtotal: Number(price || 0) * quantity,
         }
       })
       .filter(Boolean)
-  }, [cart, cartVariants, products])
+  }, [cart, products])
 
   const cartCount = useMemo(
     () => cartItems.length,
@@ -352,8 +368,9 @@ function AppProvider({ children }) {
       reloadProducts: loadProducts,
       catalogQuery,
       setCatalogQuery,
+      catalogFilters,
+      setCatalogFilters,
       cart,
-      cartVariants,
       cartItems,
       cartCount,
       cartTotal,
@@ -371,11 +388,11 @@ function AppProvider({ children }) {
     [
       addToCart,
       cart,
-      cartVariants,
       cartCount,
       cartItems,
       cartTotal,
       catalogQuery,
+      catalogFilters,
       clearCart,
       isAdmin,
       isSuperAdmin,
@@ -395,7 +412,12 @@ function AppProvider({ children }) {
     ],
   )
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+      <Toaster />
+    </AppContext.Provider>
+  )
 }
 
 function RequireRole({ roles, children }) {
@@ -415,6 +437,18 @@ function RequireRole({ roles, children }) {
 function LegacyProductRouteRedirect() {
   const { id } = useParams()
   return <Navigate to={id ? `/catalog/${id}` : '/catalog'} replace />
+}
+
+function VisitTracker() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    // 只统计客户侧页面，后台自己人的访问不算访问量
+    if (/^\/(admin|workspace|login)/.test(pathname)) return
+    api.post('/visits', { device_id: getDeviceId(), path: pathname }).catch(() => {})
+  }, [pathname])
+
+  return null
 }
 
 function AppRoutes() {
@@ -482,6 +516,7 @@ export default function App() {
   return (
     <AppProvider>
       <BrowserRouter>
+        <VisitTracker />
         <AppRoutes />
         {/* <AiChatWidget /> */}
       </BrowserRouter>
