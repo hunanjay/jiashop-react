@@ -125,8 +125,8 @@ export default function CartPage() {
     setCheckoutOpen(true)
   }
 
-  const commitQuantity = (productId, nextQuantity) => {
-    updateCartQuantity(productId, nextQuantity)
+  const commitQuantity = (lineKey, nextQuantity) => {
+    updateCartQuantity(lineKey, nextQuantity)
   }
 
   const submitCheckout = async () => {
@@ -237,7 +237,7 @@ export default function CartPage() {
         <div className="space-y-4">
           {cartItems.map((item) => (
             <div
-              key={item.id}
+              key={item.lineKey}
               className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
             >
               <div className="flex gap-4 p-4 sm:p-5">
@@ -253,7 +253,7 @@ export default function CartPage() {
                   <div className="mt-4 flex items-center gap-2">
                     <CartQuantityControl
                       quantity={item.quantity}
-                      onCommit={(nextQuantity) => commitQuantity(item.id, nextQuantity)}
+                      onCommit={(nextQuantity) => commitQuantity(item.lineKey, nextQuantity)}
                     />
                   </div>
                 </div>
@@ -313,7 +313,7 @@ export default function CartPage() {
         }}
         onConfirm={() => {
           if (!pendingItem) return
-          updateCartQuantity(pendingItem.id, 0)
+          updateCartQuantity(pendingItem.lineKey, 0)
           setRemoveOpen(false)
           setPendingItem(null)
         }}
@@ -420,7 +420,7 @@ export default function CartPage() {
                 <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <div className="space-y-3">
                     {cartItems.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
+                      <div key={item.lineKey} className="flex items-center justify-between gap-3 text-sm">
                         <div className="min-w-0">
                           <div className="truncate font-medium text-gray-900">{item.name}</div>
                           {item.variantName && (
