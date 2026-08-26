@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 
 import { AppContext } from './lib/app-context'
 import { api, setAuthToken } from './lib/api'
 import { getApiErrorMessage } from './lib/api-error'
+import { getDeviceId } from './lib/device'
 import { Toaster } from './components/ui/toaster'
 import AdminLayout from './layouts/AdminLayout'
 import ClientLayout from './layouts/ClientLayout'
@@ -438,6 +439,18 @@ function LegacyProductRouteRedirect() {
   return <Navigate to={id ? `/catalog/${id}` : '/catalog'} replace />
 }
 
+function VisitTracker() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    // 只统计客户侧页面，后台自己人的访问不算访问量
+    if (/^\/(admin|workspace|login)/.test(pathname)) return
+    api.post('/visits', { device_id: getDeviceId(), path: pathname }).catch(() => {})
+  }, [pathname])
+
+  return null
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -503,6 +516,7 @@ export default function App() {
   return (
     <AppProvider>
       <BrowserRouter>
+        <VisitTracker />
         <AppRoutes />
         {/* <AiChatWidget /> */}
       </BrowserRouter>
