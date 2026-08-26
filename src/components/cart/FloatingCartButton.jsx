@@ -62,12 +62,12 @@ export function FloatingCartButton() {
       <Link
         ref={buttonRef}
         to="/cart"
-        className="fixed right-4 top-4 z-40 inline-flex items-center gap-2 rounded-lg bg-white border border-gray-200 shadow-md px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 transition duration-150 sm:right-6 sm:top-6"
+        className="fixed right-4 top-5 z-40 inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200/90 bg-white/90 px-3.5 text-sm font-semibold text-slate-800 shadow-[0_8px_24px_rgba(48,70,110,0.10)] backdrop-blur-md transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 active:translate-y-0 sm:right-6 sm:top-7 dark:border-white/10 dark:bg-[#191c23]/90 dark:text-slate-100 dark:hover:border-blue-400/50 dark:hover:text-blue-300 dark:focus-visible:ring-offset-[#111318]"
         aria-label="查看购物车"
       >
         <ShoppingCart className="h-4 w-4" />
         <span className="hidden sm:inline">购物车</span>
-        <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-blue-700 px-2 py-0.5 text-[11px] font-semibold text-white">
+        <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-blue-700 px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-blue-300 dark:text-slate-950">
           {cartCount}
         </span>
       </Link>

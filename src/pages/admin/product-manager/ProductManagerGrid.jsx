@@ -33,7 +33,7 @@ export default function ProductManagerGrid({ products, loading, canEditProduct, 
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-8">
+    <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
       {products.map((product) => {
         const editable = canEditProduct ? canEditProduct(product) : true
         const deletable = canDeleteProduct ? canDeleteProduct(product) : true
@@ -58,23 +58,23 @@ export default function ProductManagerGrid({ products, loading, canEditProduct, 
                   </div>
                 )}
               </div>
-              <div className="absolute right-2 top-2 z-10 flex items-center gap-2">
+              <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100">
                 {editable ? (
                   <button
                     type="button"
                     onClick={() => onEdit(product)}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-300 bg-white/95 text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900"
                   >
-                    <Edit3 className="h-3.5 w-3.5" />
+                    <Edit3 className="h-3 w-3" />
                   </button>
                 ) : null}
                 {deletable ? (
                   <button
                     type="button"
                     onClick={() => onDelete(product)}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-700 shadow-sm transition hover:bg-red-100"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-red-200 bg-red-50/95 text-red-700 shadow-sm transition hover:bg-red-100"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3 w-3" />
                   </button>
                 ) : null}
               </div>
@@ -91,9 +91,8 @@ export default function ProductManagerGrid({ products, loading, canEditProduct, 
                 <div className="mt-1 truncate text-xs text-gray-500">{product.description || 'No description'}</div>
               </div>
 
-              <div className="rounded-lg bg-blue-50 border border-blue-100 px-2.5 py-1.5 text-right text-blue-700 shadow-xs">
-                <div className="text-[9px] uppercase tracking-wider text-blue-600/75">Price</div>
-                <div className="text-sm font-semibold text-blue-800">{formatCurrency(product.price)}</div>
+              <div className="flex-shrink-0 rounded-md bg-blue-50 border border-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 shadow-xs">
+                {formatCurrency(product.price)}
               </div>
             </div>
           </article>

@@ -10,11 +10,17 @@ import ProductManagerToolbar from './product-manager/ProductManagerToolbar'
 import ProductManagerGrid from './product-manager/ProductManagerGrid'
 import ProductManagerCategoryModal from './product-manager/ProductManagerCategoryModal'
 
+const ADMIN_PAGE_SIZE = 24
+
 export default function ProductManagerPage({ scope = 'admin' }) {
   const navigate = useNavigate()
   const { products, reloadProducts, reloadProductCategories, pushToast, session } = useApp()
   const [workspaceProducts, setWorkspaceProducts] = useState([])
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
+  const [adminProducts, setAdminProducts] = useState([])
+  const [adminLoading, setAdminLoading] = useState(false)
+  const [adminPage, setAdminPage] = useState(1)
+  const [adminTotalPages, setAdminTotalPages] = useState(1)
   const [categoryCatalog, setCategoryCatalog] = useState([])
   const [categoryLoading, setCategoryLoading] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -74,6 +80,42 @@ export default function ProductManagerPage({ scope = 'admin' }) {
     })
   }, [activeCategory, search, visibleProducts])
 
+  // Debounce search so it doesn't refetch on every keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState(search)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
+    setAdminPage(1)
+  }, [activeCategory, debouncedSearch])
+
+  const fetchAdminProducts = useCallback(async () => {
+    if (scope === 'workspace') return
+    setAdminLoading(true)
+    try {
+      const response = await api.get('/products/catalog', {
+        params: {
+          page: adminPage,
+          page_size: ADMIN_PAGE_SIZE,
+          q: debouncedSearch || undefined,
+          category: activeCategory === '全部商品' ? 'all' : activeCategory,
+        },
+      })
+      setAdminProducts(response.data?.items || [])
+      setAdminTotalPages(response.data?.total_pages || 1)
+    } catch (error) {
+      pushToast('error', '商品加载失败', getApiErrorMessage(error))
+    } finally {
+      setAdminLoading(false)
+    }
+  }, [scope, adminPage, activeCategory, debouncedSearch, pushToast])
+
+  useEffect(() => {
+    fetchAdminProducts()
+  }, [fetchAdminProducts])
+
   const refreshVisibleProducts = useCallback(async () => {
     if (scope === 'workspace') {
       setWorkspaceLoading(true)
@@ -88,8 +130,8 @@ export default function ProductManagerPage({ scope = 'admin' }) {
       return
     }
 
-    await reloadProducts()
-  }, [pushToast, reloadProducts, scope])
+    await Promise.all([reloadProducts(), fetchAdminProducts()])
+  }, [pushToast, reloadProducts, scope, fetchAdminProducts])
 
   const refreshCategoryCatalog = useCallback(async () => {
     setCategoryLoading(true)
@@ -273,8 +315,8 @@ export default function ProductManagerPage({ scope = 'admin' }) {
         {/* 右侧商品管理列表 (Products Grid) */}
         <main className="space-y-6">
           <ProductManagerGrid
-            products={filteredProducts}
-            loading={scope === 'workspace' ? workspaceLoading : false}
+            products={scope === 'workspace' ? filteredProducts : adminProducts}
+            loading={scope === 'workspace' ? workspaceLoading : adminLoading}
             canEditProduct={canEditProduct}
             canDeleteProduct={canDeleteProduct}
             onEdit={openEditDrawer}
@@ -284,6 +326,30 @@ export default function ProductManagerPage({ scope = 'admin' }) {
               setActiveCategory('全部商品')
             }}
           />
+
+          {scope !== 'workspace' && adminTotalPages > 1 ? (
+            <div className="flex items-center justify-center gap-3 text-sm">
+              <button
+                type="button"
+                disabled={adminPage <= 1}
+                onClick={() => setAdminPage((p) => Math.max(1, p - 1))}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                上一页
+              </button>
+              <span className="text-gray-500">
+                第 {adminPage} / {adminTotalPages} 页
+              </span>
+              <button
+                type="button"
+                disabled={adminPage >= adminTotalPages}
+                onClick={() => setAdminPage((p) => Math.min(adminTotalPages, p + 1))}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                下一页
+              </button>
+            </div>
+          ) : null}
         </main>
       </div>
 
