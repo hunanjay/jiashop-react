@@ -92,6 +92,7 @@ function AppProvider({ children }) {
   const [products, setProducts] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [catalogQuery, setCatalogQuery] = useState('')
+  const [catalogFilters, setCatalogFilters] = useState({ category: 'all', price: 'all', tag: 'all', page: 1 })
   const [cart, setCart] = useState(loadCart)
   const [cartVariants, setCartVariants] = useState(loadCartVariants)
   const [cartToken] = useState(loadCartToken)
@@ -352,6 +353,8 @@ function AppProvider({ children }) {
       reloadProducts: loadProducts,
       catalogQuery,
       setCatalogQuery,
+      catalogFilters,
+      setCatalogFilters,
       cart,
       cartVariants,
       cartItems,
@@ -376,6 +379,7 @@ function AppProvider({ children }) {
       cartItems,
       cartTotal,
       catalogQuery,
+      catalogFilters,
       clearCart,
       isAdmin,
       isSuperAdmin,

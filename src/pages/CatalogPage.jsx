@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ChevronDown, ChevronUp, LayoutGrid, Search, SlidersHorizontal, Tag, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigationType } from 'react-router-dom'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, LayoutGrid, Search, SlidersHorizontal, Tag, X } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
+import { api } from '../lib/api'
+import { getApiErrorMessage } from '../lib/api-error'
+import { useDebounce } from '../lib/useDebounce'
 import { FloatingCartButton } from '../components/cart/FloatingCartButton'
 import {
   Sheet,
@@ -14,6 +17,7 @@ import {
 } from '../components/ui/sheet'
 
 const CARD_IMAGE_ASPECT = '1 / 1'
+const PAGE_SIZE = 20
 
 const PRICE_FILTERS = [
   { label: '全部价格', value: 'all' },
@@ -169,11 +173,24 @@ function FilterPanel({
 }
 
 export default function CatalogPage() {
-  const { products, loadingProducts, catalogQuery, setCatalogQuery, categoryOptions } = useApp()
-  const [activeCategory, setActiveCategory] = useState('all')
-  const [priceFilter, setPriceFilter] = useState('all')
+  const { products, catalogQuery, setCatalogQuery, catalogFilters, setCatalogFilters, categoryOptions, pushToast } = useApp()
+  const navigationType = useNavigationType()
+  // Filters + page live in AppContext (like catalogQuery) rather than local
+  // state, so they survive leaving for a product detail page and back —
+  // returning to /catalog re-fetches the same filtered page instead of
+  // resetting to "all".
+  const { category: activeCategory, price: priceFilter, tag: tagFilter, page, scrollY: savedScrollY } = catalogFilters
+  const setActiveCategory = (category) => setCatalogFilters((f) => ({ ...f, category }))
+  const setPriceFilter = (price) => setCatalogFilters((f) => ({ ...f, price }))
+  const setTagFilter = (tag) => setCatalogFilters((f) => ({ ...f, tag }))
+  const setPage = (next) => setCatalogFilters((f) => ({ ...f, page: typeof next === 'function' ? next(f.page) : next }))
   const [priceOpen, setPriceOpen] = useState(true)
-  const [tagFilter, setTagFilter] = useState('all')
+  const debouncedQuery = useDebounce(catalogQuery, 300)
+
+  const [items, setItems] = useState([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loadedKey, setLoadedKey] = useState('')
 
   const activeFilterCount = [
     activeCategory !== 'all',
@@ -182,45 +199,92 @@ export default function CatalogPage() {
     tagFilter !== 'all',
   ].filter(Boolean).length
 
-  const productRows = useMemo(() => {
-    return products
-      .filter((product) => {
-        const text = [
-          product.name,
-          product.description,
-          product.category,
-          product.customization?.type,
-          product.specs,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
+  // Loading is derived rather than a separate state flag: it's true
+  // whenever the currently-requested filters/page don't match what's loaded.
+  const filterKey = `${activeCategory}|${priceFilter}|${debouncedQuery}|${tagFilter}`
+  const requestKey = `${filterKey}|${page}`
+  const catalogLoading = loadedKey !== requestKey
+  // totalPages only describes the current filters once a response for THEM
+  // has landed. On a fresh mount it is still the initial 1, so the clamp
+  // below must not trust it yet — otherwise returning from a product page
+  // on page 3 would snap straight back to page 1.
+  const totalPagesIsCurrent = loadedKey.startsWith(`${filterKey}|`)
 
-        if (catalogQuery.trim() && !text.includes(catalogQuery.trim().toLowerCase())) {
-          return false
-        }
+  // Reset to page 1 whenever the filters change, and clamp to the last page
+  // if it shrinks below the current one — done during render (React's
+  // "adjust state while rendering" pattern) instead of a useEffect.
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey)
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey)
+    if (page !== 1) setPage(1)
+  } else if (totalPagesIsCurrent && page > totalPages) {
+    setPage(totalPages)
+  }
 
-        if (activeCategory !== 'all' && product.category !== activeCategory) {
-          return false
-        }
-
-        const price = Number(product.price || 0)
-        if (priceFilter === '0-50' && !(price < 50)) return false
-        if (priceFilter === '50-150' && !(price >= 50 && price < 150)) return false
-        if (priceFilter === '150+' && !(price >= 150)) return false
-
-        if (tagFilter === 'featured' && !product.is_featured) return false
-        if (tagFilter === 'promotion' && !product.is_promotion) return false
-
-        return true
+  useEffect(() => {
+    let mounted = true
+    api
+      .get('/products/catalog', {
+        params: {
+          page,
+          page_size: PAGE_SIZE,
+          q: debouncedQuery.trim() || undefined,
+          category: activeCategory,
+          price: priceFilter,
+          tag: tagFilter,
+        },
       })
-      .sort((left, right) => {
-        const leftScore = (left.is_featured ? 2 : 0) + (left.is_promotion ? 1 : 0)
-        const rightScore = (right.is_featured ? 2 : 0) + (right.is_promotion ? 1 : 0)
-        if (rightScore !== leftScore) return rightScore - leftScore
-        return Number(right.sales_count || 0) - Number(left.sales_count || 0)
+      .then((response) => {
+        if (!mounted) return
+        setItems(response.data.items || [])
+        setTotal(response.data.total || 0)
+        setTotalPages(response.data.total_pages || 1)
+        setLoadedKey(requestKey)
       })
-  }, [activeCategory, catalogQuery, priceFilter, tagFilter, products])
+      .catch((error) => {
+        if (mounted) pushToast('error', '商品加载失败', getApiErrorMessage(error, '请检查后端服务是否已启动'))
+      })
+    return () => {
+      mounted = false
+    }
+  }, [activeCategory, priceFilter, debouncedQuery, tagFilter, page, requestKey, pushToast])
+
+  // Manual scroll restore: browsers don't restore scroll position for
+  // client-side (pushState) route changes, only real document navigations.
+  //
+  // The offset is tracked in a ref on every scroll rather than read at
+  // unmount: an effect cleanup is a *passive* effect, so React runs it only
+  // after the next route has painted — by which point the shorter detail
+  // page has shrunk the document and the browser has already clamped
+  // window.scrollY to 0, which is all we would ever save.
+  //
+  // The ref is seeded with the saved offset (not 0) because StrictMode
+  // mounts, unmounts and remounts every effect on the first mount: that
+  // simulated cleanup runs before any scroll event, so a 0-seeded ref would
+  // immediately overwrite the position we came back to restore.
+  const scrollYRef = useRef(savedScrollY || 0)
+  useEffect(() => {
+    const handleScroll = () => {
+      scrollYRef.current = window.scrollY
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      setCatalogFilters((f) => ({ ...f, scrollY: scrollYRef.current }))
+    }
+  }, [setCatalogFilters])
+
+  // Restore only when arriving back via a real "back" navigation, and only
+  // once the real items (not the skeleton) have rendered so the page has
+  // its final height.
+  const restoredScrollRef = useRef(false)
+  useEffect(() => {
+    if (catalogLoading || restoredScrollRef.current) return
+    restoredScrollRef.current = true
+    if (navigationType === 'POP' && savedScrollY) {
+      window.scrollTo(0, savedScrollY)
+    }
+  }, [catalogLoading, navigationType, savedScrollY])
 
   const clearFilters = () => {
     setActiveCategory('all')
@@ -291,7 +355,7 @@ export default function CatalogPage() {
             <div className="flex items-center gap-3">
               <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-500">
                 <LayoutGrid className="h-4 w-4" />
-                <span>{productRows.length} 件商品</span>
+                <span>{total} 件商品</span>
               </div>
               <Link
                 to="/"
@@ -339,7 +403,7 @@ export default function CatalogPage() {
           </aside>
 
           <main className="space-y-5">
-            {loadingProducts ? (
+            {catalogLoading ? (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
@@ -354,9 +418,10 @@ export default function CatalogPage() {
                   </div>
                 ))}
               </div>
-            ) : productRows.length ? (
+            ) : items.length ? (
+              <>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {productRows.map((product) => {
+                {items.map((product) => {
                   return (
                     <Link
                       key={product.id}
@@ -367,6 +432,7 @@ export default function CatalogPage() {
                         <img
                           src={product.image_url}
                           alt={product.name}
+                          loading="lazy"
                           className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                         />
                         {(product.is_featured || product.is_promotion) && (
@@ -393,6 +459,31 @@ export default function CatalogPage() {
                   )
                 })}
               </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition hover:border-blue-700 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:text-gray-600"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="px-2 text-sm text-gray-600">
+                    第 {page} / {totalPages} 页
+                  </span>
+                  <button
+                    type="button"
+                    disabled={page === totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition hover:border-blue-700 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:text-gray-600"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              </>
             ) : (
               <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-gray-100 text-gray-400">
