@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
@@ -9,7 +9,20 @@ import { ImageViewer } from '../components/ui/ImageViewer'
 
 export default function ProductDetailPage() {
   const id = useParams().id
+  const navigate = useNavigate()
+  const location = useLocation()
   const { products, cartItems, addToCart } = useApp()
+
+  const goBackToCatalog = () => {
+    // Pop to the existing /catalog history entry (if we came from one) so the
+    // browser restores its scroll position, instead of pushing a fresh entry
+    // that always mounts scrolled to the top.
+    if (location.key !== 'default') {
+      navigate(-1)
+    } else {
+      navigate('/catalog')
+    }
+  }
   const product = products.find((item) => item.id === id)
   const existingQuantity = cartItems.find((item) => item.id === id)?.quantity || 0
   const [quantity, setQuantity] = useState('1')
@@ -61,13 +74,14 @@ export default function ProductDetailPage() {
       <div className="flex h-full flex-col px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex w-full flex-1 flex-col overflow-hidden">
           <div className="mb-6 flex-shrink-0">
-            <Link
-              to="/catalog"
+            <button
+              type="button"
+              onClick={goBackToCatalog}
               className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-blue-700 hover:text-blue-700"
             >
               <ArrowLeft className="h-4 w-4" />
               返回列表
-            </Link>
+            </button>
           </div>
 
           <div className="grid min-h-0 flex-1 gap-10 overflow-hidden lg:grid-cols-2 lg:items-stretch">
