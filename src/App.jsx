@@ -6,6 +6,7 @@ import { api, setAuthToken } from './lib/api'
 import { getApiErrorMessage } from './lib/api-error'
 import { getDeviceId } from './lib/device'
 import { Toaster } from './components/ui/toaster'
+import { UploadQueueWidget } from './components/ui/UploadQueueWidget'
 import AdminLayout from './layouts/AdminLayout'
 import ClientLayout from './layouts/ClientLayout'
 import LoginPage from './pages/LoginPage'
@@ -121,6 +122,7 @@ function AppProvider({ children }) {
   const [toasts, setToasts] = useState([])
   const [loadingAuth, setLoadingAuth] = useState(false)
   const [categoryOptions, setCategoryOptions] = useState(DEFAULT_CATEGORY_OPTIONS)
+  const [saveJobs, setSaveJobs] = useState([])
   const theme = 'sun'
 
   const pushToast = useCallback((type, title, detail = '') => {
@@ -180,6 +182,60 @@ function AppProvider({ children }) {
       setLoadingProducts(false)
     }
   }, [pushToast])
+
+  // Uploads product images and creates/updates the product in the background so
+  // the admin can navigate away immediately instead of waiting on the modal.
+  const queueProductSave = useCallback(({ isEdit, productId, label, mainImages, galleryImages, buildPayload }) => {
+    const jobId = `${Date.now()}-${Math.random().toString(16).slice(2)}`
+    const total = mainImages.length + galleryImages.length
+    setSaveJobs((current) => [...current, { id: jobId, label, total, completed: 0, status: 'uploading' }])
+
+    const normalizeImg = async (img) => {
+      if (img.startsWith('data:')) {
+        const res = await api.post('/upload', { image: img })
+        return res.data.key
+      }
+      if (img.includes('/uploads/')) {
+        return 'uploads/' + img.split('/uploads/')[1].split('?')[0]
+      }
+      return img
+    }
+
+    ;(async () => {
+      try {
+        const uploaded = []
+        for (const img of [...mainImages, ...galleryImages]) {
+          uploaded.push(await normalizeImg(img))
+          setSaveJobs((current) => current.map((j) => (j.id === jobId ? { ...j, completed: uploaded.length } : j)))
+        }
+        const uploadedMain = uploaded.slice(0, mainImages.length)
+        const uploadedGallery = uploaded.slice(mainImages.length)
+
+        setSaveJobs((current) => current.map((j) => (j.id === jobId ? { ...j, status: 'saving' } : j)))
+        const finalPayload = buildPayload(uploadedMain, uploadedGallery)
+        if (isEdit) {
+          await api.put(`/products/${productId}`, finalPayload)
+        } else {
+          await api.post('/products', finalPayload)
+        }
+
+        pushToast('success', isEdit ? '更新成功' : '创建成功', `${finalPayload.name} 已完全录入系统`)
+        loadProducts()
+      } catch (err) {
+        console.error('Product save failed:', err)
+        pushToast('error', '存档失败', `${label} · 请检查网络或数据格式`)
+        setSaveJobs((current) => current.map((j) => (j.id === jobId ? { ...j, status: 'error' } : j)))
+        return
+      }
+      setSaveJobs((current) => current.filter((j) => j.id !== jobId))
+    })()
+
+    return jobId
+  }, [pushToast, loadProducts])
+
+  const dismissSaveJob = useCallback((jobId) => {
+    setSaveJobs((current) => current.filter((j) => j.id !== jobId))
+  }, [])
 
   const loadProductCategories = useCallback(async () => {
     try {
@@ -384,6 +440,9 @@ function AppProvider({ children }) {
       isAdmin,
       isSuperAdmin,
       theme,
+      saveJobs,
+      queueProductSave,
+      dismissSaveJob,
     }),
     [
       addToCart,
@@ -409,6 +468,9 @@ function AppProvider({ children }) {
       session,
       toasts,
       updateCartQuantity,
+      saveJobs,
+      queueProductSave,
+      dismissSaveJob,
     ],
   )
 
@@ -416,6 +478,7 @@ function AppProvider({ children }) {
     <AppContext.Provider value={value}>
       {children}
       <Toaster />
+      <UploadQueueWidget />
     </AppContext.Provider>
   )
 }

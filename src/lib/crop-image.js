@@ -63,6 +63,10 @@ export async function normalizeOrientation(imageSrc) {
   })
 }
 
+// Cap at 2x a typical 800px display size — sharp on retina screens without
+// shipping near-full-sensor-resolution photos (which made saves slow/flaky).
+const MAX_OUTPUT_DIMENSION = 1600
+
 export async function getCroppedImg(imageSrc, pixelCrop, options = {}) {
   const image = await createImage(imageSrc)
   const rotation = options.rotation || 0
@@ -82,9 +86,13 @@ export async function getCroppedImg(imageSrc, pixelCrop, options = {}) {
   rotCtx.rotate(rad)
   rotCtx.drawImage(image, -image.width / 2, -image.height / 2)
 
-  // Step 2: crop the rotated canvas — use natural crop size, not a forced resize
-  const outW = Math.round(pixelCrop.width)
-  const outH = Math.round(pixelCrop.height)
+  // Step 2: crop the rotated canvas at its natural aspect ratio (no forced
+  // stretch), capped to MAX_OUTPUT_DIMENSION on the long edge
+  const cropW = Math.round(pixelCrop.width)
+  const cropH = Math.round(pixelCrop.height)
+  const scale = Math.min(1, MAX_OUTPUT_DIMENSION / Math.max(cropW, cropH))
+  const outW = Math.round(cropW * scale)
+  const outH = Math.round(cropH * scale)
 
   const canvas = document.createElement('canvas')
   canvas.width = outW
@@ -102,9 +110,28 @@ export async function getCroppedImg(imageSrc, pixelCrop, options = {}) {
       reader.readAsDataURL(blob)
     }
     canvas.toBlob(
-      (blob) => { blob ? toDataUrl(blob) : canvas.toBlob(toDataUrl, 'image/jpeg', 0.97) },
+      (blob) => { blob ? toDataUrl(blob) : canvas.toBlob(toDataUrl, 'image/jpeg', 0.9) },
       'image/webp',
-      0.97,
+      0.9,
     )
+  })
+}
+
+// Full-image resize for the no-crop paths (multi-file picker, multi-paste)
+// so those don't ship raw, full-resolution photos either.
+export async function downscaleImage(imageSrc, maxDimension = MAX_OUTPUT_DIMENSION, quality = 0.9) {
+  const img = await createImage(imageSrc)
+  const scale = Math.min(1, maxDimension / Math.max(img.naturalWidth, img.naturalHeight))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(img.naturalWidth * scale)
+  canvas.height = Math.round(img.naturalHeight * scale)
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      if (!blob) { resolve(imageSrc); return }
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.readAsDataURL(blob)
+    }, 'image/webp', quality)
   })
 }

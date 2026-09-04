@@ -6,9 +6,8 @@ import { Textarea } from '../../../components/ui/textarea'
 import { ImageCardUploader } from '../../../components/ui/ImageCardUploader'
 import { useApp } from '../../../lib/app-context'
 import { api } from '../../../lib/api'
-import { getApiErrorMessage } from '../../../lib/api-error'
 import { extractClipboardImage } from '../../../lib/clipboard-image'
-import { ArrowLeft, Save, Globe } from 'lucide-react'
+import { ArrowLeft, Save, Globe, GripVertical } from 'lucide-react'
 
 const EMPTY_FORM = {
   name: '',
@@ -28,7 +27,7 @@ const EMPTY_VARIANT = { name: '', price: '', stock: '' }
 export default function ProductEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { pushToast, categoryOptions, reloadProducts, reloadProductCategories } = useApp()
+  const { pushToast, categoryOptions, reloadProductCategories, queueProductSave } = useApp()
   const [form, setForm] = useState(EMPTY_FORM)
   const [loading, setLoading] = useState(false)
 
@@ -37,7 +36,7 @@ export default function ProductEditPage() {
   const autoPrice = hasVariants
     ? Math.min(...activeVariants.map((v) => Number(v.price) || 0))
     : null
-  const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState({})
   const [selectedPasteTarget, setSelectedPasteTarget] = useState('main')
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -117,69 +116,53 @@ export default function ProductEditPage() {
     loadProduct()
   }, [loadProduct])
 
-  const handleSave = async () => {
+  // Queues image upload + product create/update in the background (see
+  // queueProductSave in App.jsx) so this page can navigate away immediately
+  // instead of blocking on uploads; progress shows in the floating widget.
+  const handleSave = () => {
     const hasVariants = (form.variants || []).filter((v) => v.name?.trim()).length > 0
-    if (!form.name || (!hasVariants && !form.price)) {
-      pushToast('warning', '请填写必填项', hasVariants ? '商品名称为必填项' : '商品名称和价格为必填项')
+    const nextErrors = {}
+    if (!form.name.trim()) nextErrors.name = '请输入商品名称'
+    if (!hasVariants && !form.price) nextErrors.price = '请输入零售价格'
+    if (!form.category) nextErrors.category = '请选择商品分类'
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) {
+      pushToast('warning', '请填写必填项', Object.values(nextErrors).join('，'))
       return
     }
 
-    setSaving(true)
-    try {
-      pushToast('info', '正在保存', '图片正在上传中...')
+    const cleanVariants = (form.variants || [])
+      .filter((v) => v.name?.trim())
+      .map((v) => ({
+        name: v.name.trim(),
+        price: Number(v.price) || 0,
+        stock: v.stock === '' ? 99 : Number(v.stock) || 0,
+      }))
 
-      const normalizeImg = async (img) => {
-        if (img.startsWith('data:')) {
-          const res = await api.post('/upload', { image: img })
-          return res.data.key
-        }
-        if (img.includes('/uploads/')) {
-          const parts = img.split('/uploads/')
-          return 'uploads/' + parts[1].split('?')[0]
-        }
-        return img
-      }
+    const basePrice = cleanVariants.length > 0
+      ? Math.min(...cleanVariants.map((v) => v.price))
+      : Number(form.price) || 0
 
-      const uploadedMain = await Promise.all((form.mainImages || []).map(normalizeImg))
-      const uploadedGallery = await Promise.all((form.images || []).map(normalizeImg))
+    const { mainImages: _m, ...formRest } = form
 
-      const cleanVariants = (form.variants || [])
-        .filter((v) => v.name?.trim())
-        .map((v) => ({
-          name: v.name.trim(),
-          price: Number(v.price) || 0,
-          stock: v.stock === '' ? 99 : Number(v.stock) || 0,
-        }))
-
-      const basePrice = cleanVariants.length > 0
-        ? Math.min(...cleanVariants.map((v) => v.price))
-        : Number(form.price) || 0
-
-      const { mainImages: _m, ...formRest } = form
-      const finalPayload = {
+    queueProductSave({
+      isEdit,
+      productId: id,
+      label: form.name,
+      mainImages: form.mainImages || [],
+      galleryImages: form.images || [],
+      buildPayload: (uploadedMain, uploadedGallery) => ({
         ...formRest,
         price: basePrice,
         stock: Number(form.stock) || 99,
         main_images: uploadedMain,
         images: uploadedGallery,
         variants: cleanVariants,
-      }
+      }),
+    })
 
-      if (isEdit) {
-        await api.put(`/products/${id}`, finalPayload)
-      } else {
-        await api.post('/products', finalPayload)
-      }
-
-      pushToast('success', isEdit ? '更新成功' : '创建成功', '商品已完全录入系统')
-      await reloadProducts()
-      navigate(-1)
-    } catch (err) {
-      console.error('Save failed:', err)
-      pushToast('error', '存档失败', getApiErrorMessage(err, '请检查网络或数据格式'))
-    } finally {
-      setSaving(false)
-    }
+    pushToast('info', '已加入后台保存', '图片上传中，可继续其他操作')
+    navigate(-1)
   }
 
   const updateMainImage = useCallback((index, val) => {
@@ -269,11 +252,10 @@ export default function ProductEditPage() {
           <div className="flex items-center gap-4">
             <Button
               onClick={handleSave}
-              disabled={saving}
               className="flex items-center gap-2 h-11 px-8 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-medium transition border-0"
             >
               <Save className="h-4 w-4" />
-              {saving ? '正在保存...' : '保存商品'}
+              保存商品
             </Button>
           </div>
         </div>
@@ -293,34 +275,43 @@ export default function ProductEditPage() {
 
                 <div className="grid gap-5">
                   <label className="block space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">商品名称</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">商品名称 <span className="text-red-500">*</span></span>
                     <Input
                       value={form.name}
-                      onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
-                      className="h-11 border border-gray-300 bg-white text-sm text-gray-900 px-4 rounded-lg focus:border-blue-500 focus:ring-blue-500/20"
+                      onChange={(e) => {
+                        setForm((c) => ({ ...c, name: e.target.value }))
+                        if (errors.name) setErrors((er) => ({ ...er, name: undefined }))
+                      }}
+                      className={`h-11 border bg-white text-sm text-gray-900 px-4 rounded-lg focus:border-blue-500 focus:ring-blue-500/20 ${errors.name ? 'border-red-400' : 'border-gray-300'}`}
                       placeholder="请输入商品名称"
                     />
+                    {errors.name && <span className="text-[10px] text-red-500">{errors.name}</span>}
                   </label>
 
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                     <label className="block space-y-1.5">
                       <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">
-                        零售价格{hasVariants && <span className="ml-1 text-[10px] font-normal text-gray-400 normal-case">由规格自动取最低价</span>}
+                        零售价格 {!hasVariants && <span className="text-red-500">*</span>}{hasVariants && <span className="ml-1 text-[10px] font-normal text-gray-400 normal-case">由规格自动取最低价</span>}
                       </span>
                       <div className="relative group">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-900">¥</span>
                         <Input
                           type="number"
                           value={hasVariants ? autoPrice ?? '' : form.price}
-                          onChange={(e) => !hasVariants && setForm((c) => ({ ...c, price: e.target.value }))}
+                          onChange={(e) => {
+                            if (hasVariants) return
+                            setForm((c) => ({ ...c, price: e.target.value }))
+                            if (errors.price) setErrors((er) => ({ ...er, price: undefined }))
+                          }}
                           readOnly={hasVariants}
-                          className={`h-11 border border-gray-300 text-sm text-gray-900 pl-10 pr-4 rounded-lg focus:border-blue-500 focus:ring-blue-500/20 ${hasVariants ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white'}`}
+                          className={`h-11 border text-sm text-gray-900 pl-10 pr-4 rounded-lg focus:border-blue-500 focus:ring-blue-500/20 ${hasVariants ? 'bg-gray-50 text-gray-400 cursor-not-allowed border-gray-300' : 'bg-white'} ${errors.price ? 'border-red-400' : 'border-gray-300'}`}
                         />
                       </div>
+                      {errors.price && <span className="text-[10px] text-red-500">{errors.price}</span>}
                     </label>
 
                     <label className="block space-y-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">商品分类</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">商品分类 <span className="text-red-500">*</span></span>
                       {!showNewCategoryInput ? (
                         <div className="flex gap-2">
                           <div className="relative flex-1">
@@ -332,9 +323,10 @@ export default function ProductEditPage() {
                                   setShowNewCategoryInput(true)
                                 } else {
                                   setForm((c) => ({ ...c, category: val }))
+                                  if (errors.category) setErrors((er) => ({ ...er, category: undefined }))
                                 }
                               }}
-                              className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-blue-500/20"
+                              className={`h-11 w-full appearance-none rounded-lg border bg-white px-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-blue-500/20 ${errors.category ? 'border-red-400' : 'border-gray-300'}`}
                             >
                               <option value="">请选择分类</option>
                               {categoryOptions.filter(o => o.value !== 'all').map((item) => (
@@ -384,6 +376,7 @@ export default function ProductEditPage() {
                           </Button>
                         </div>
                       )}
+                      {errors.category && <span className="text-[10px] text-red-500">{errors.category}</span>}
                     </label>
 
                     <label className="block space-y-1.5">
@@ -447,14 +440,32 @@ export default function ProductEditPage() {
 
                     {(form.variants || []).length > 0 && (
                       <div className="rounded-lg border border-gray-200 overflow-hidden">
-                        <div className="grid grid-cols-[1fr_100px_80px_32px] gap-0 bg-gray-50 border-b border-gray-200 px-3 py-2">
+                        <div className="grid grid-cols-[28px_1fr_100px_80px_32px] gap-0 bg-gray-50 border-b border-gray-200 px-3 py-2">
+                          <span />
                           <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">规格名称</span>
                           <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">价格 (¥)</span>
                           <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">库存</span>
                           <span />
                         </div>
                         {(form.variants || []).map((v, idx) => (
-                          <div key={idx} className="grid grid-cols-[1fr_100px_80px_32px] gap-0 items-center border-b border-gray-100 last:border-b-0 px-3 py-2">
+                          <div
+                            key={idx}
+                            draggable={true}
+                            onDragStart={(e) => { e.dataTransfer.setData('sourceIndex', idx.toString()); e.currentTarget.classList.add('opacity-50', 'scale-95') }}
+                            onDragEnd={(e) => e.currentTarget.classList.remove('opacity-50', 'scale-95')}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault()
+                              const src = parseInt(e.dataTransfer.getData('sourceIndex'))
+                              if (src === idx) return
+                              const next = [...(form.variants || [])]
+                              const [moved] = next.splice(src, 1)
+                              next.splice(idx, 0, moved)
+                              setForm((c) => ({ ...c, variants: next }))
+                            }}
+                            className="grid grid-cols-[28px_1fr_100px_80px_32px] gap-0 items-center border-b border-gray-100 last:border-b-0 px-3 py-2 transition-all cursor-grab active:cursor-grabbing"
+                          >
+                            <GripVertical className="h-4 w-4 text-gray-300 mr-1" />
                             <input
                               value={v.name}
                               onChange={(e) => setForm((c) => {

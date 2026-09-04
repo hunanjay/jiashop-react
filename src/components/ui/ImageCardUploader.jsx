@@ -5,7 +5,7 @@ import { Upload, X, Edit } from "lucide-react";
 import { useApp } from "../../lib/app-context";
 import { cn } from "../../lib/utils";
 import { extractClipboardImage } from "../../lib/clipboard-image";
-import { normalizeOrientation } from "../../lib/crop-image";
+import { normalizeOrientation, downscaleImage } from "../../lib/crop-image";
 
 export function ImageCardUploader({ 
   value, 
@@ -49,7 +49,8 @@ export function ImageCardUploader({
           reader.onload = () => resolve(reader.result);
           reader.readAsDataURL(file);
         });
-        results.push(base64);
+        const normalized = await normalizeOrientation(base64);
+        results.push(await downscaleImage(normalized));
       }
       onFilesSelect(results);
       if (inputRef.current) inputRef.current.value = "";
@@ -109,7 +110,8 @@ export function ImageCardUploader({
     event.stopPropagation()
 
     if (multiple && onFilesSelect) {
-      onFilesSelect([pastedImage])
+      const normalized = await normalizeOrientation(pastedImage)
+      onFilesSelect([await downscaleImage(normalized)])
       return
     }
 
