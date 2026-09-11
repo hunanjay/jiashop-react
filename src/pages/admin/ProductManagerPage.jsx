@@ -14,12 +14,12 @@ const ADMIN_PAGE_SIZE = 24
 
 export default function ProductManagerPage({ scope = 'admin' }) {
   const navigate = useNavigate()
-  const { products, reloadProducts, reloadProductCategories, pushToast, session } = useApp()
+  const { products, reloadProducts, reloadProductCategories, pushToast, session, productManagerFilters, setProductManagerFilters } = useApp()
   const [workspaceProducts, setWorkspaceProducts] = useState([])
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [adminProducts, setAdminProducts] = useState([])
   const [adminLoading, setAdminLoading] = useState(false)
-  const [adminPage, setAdminPage] = useState(1)
+  const { search, activeCategory, page: adminPage } = productManagerFilters[scope]
   const [adminTotalPages, setAdminTotalPages] = useState(1)
   const [categoryCatalog, setCategoryCatalog] = useState([])
   const [categoryLoading, setCategoryLoading] = useState(false)
@@ -30,11 +30,37 @@ export default function ProductManagerPage({ scope = 'admin' }) {
   const [categoryConfirmOpen, setCategoryConfirmOpen] = useState(false)
   const [categorySaving, setCategorySaving] = useState(false)
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const [activeCategory, setActiveCategory] = useState('全部商品')
   const [saving, setSaving] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(null)
+
+  const setSearch = useCallback(
+    (value) =>
+      setProductManagerFilters((prev) => ({
+        ...prev,
+        [scope]: { ...prev[scope], search: value, page: 1 },
+      })),
+    [scope, setProductManagerFilters],
+  )
+  const setActiveCategory = useCallback(
+    (value) =>
+      setProductManagerFilters((prev) => ({
+        ...prev,
+        [scope]: { ...prev[scope], activeCategory: value, page: 1 },
+      })),
+    [scope, setProductManagerFilters],
+  )
+  const setAdminPage = useCallback(
+    (updater) =>
+      setProductManagerFilters((prev) => ({
+        ...prev,
+        [scope]: {
+          ...prev[scope],
+          page: typeof updater === 'function' ? updater(prev[scope].page) : updater,
+        },
+      })),
+    [scope, setProductManagerFilters],
+  )
 
   const visibleProducts = scope === 'workspace' ? workspaceProducts : products
   const canManageCategoryDictionary = Boolean(session && ['user', 'admin', 'superadmin'].includes(session.role))
@@ -86,10 +112,6 @@ export default function ProductManagerPage({ scope = 'admin' }) {
     const timer = setTimeout(() => setDebouncedSearch(search), 300)
     return () => clearTimeout(timer)
   }, [search])
-
-  useEffect(() => {
-    setAdminPage(1)
-  }, [activeCategory, debouncedSearch])
 
   const fetchAdminProducts = useCallback(async () => {
     if (scope === 'workspace') return

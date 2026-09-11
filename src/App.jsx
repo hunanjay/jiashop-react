@@ -117,6 +117,10 @@ function AppProvider({ children }) {
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [catalogQuery, setCatalogQuery] = useState('')
   const [catalogFilters, setCatalogFilters] = useState({ category: 'all', price: 'all', tag: 'all', page: 1 })
+  const [productManagerFilters, setProductManagerFilters] = useState({
+    admin: { search: '', activeCategory: '全部商品', page: 1 },
+    workspace: { search: '', activeCategory: '全部商品', page: 1 },
+  })
   const [cart, setCart] = useState(loadCart)
   const [cartToken] = useState(loadCartToken)
   const [toasts, setToasts] = useState([])
@@ -426,6 +430,8 @@ function AppProvider({ children }) {
       setCatalogQuery,
       catalogFilters,
       setCatalogFilters,
+      productManagerFilters,
+      setProductManagerFilters,
       cart,
       cartItems,
       cartCount,
@@ -452,6 +458,7 @@ function AppProvider({ children }) {
       cartTotal,
       catalogQuery,
       catalogFilters,
+      productManagerFilters,
       clearCart,
       isAdmin,
       isSuperAdmin,
