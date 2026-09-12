@@ -22,6 +22,7 @@ import AdminCustomerPage from './pages/admin/CustomerManagerPage'
 import AdminAccountPage from './pages/admin/AccountManagerPage'
 import AdminExportPage from './pages/admin/ExportPage'
 import WorkspaceCustomerPage from './pages/admin/CustomerManagerPage'
+import CommissionManagerPage from './pages/admin/CommissionManagerPage'
 import ProductEditPage from './pages/admin/product-manager/ProductEditPage'
 import AiChatWidget from './components/AiChat/AiChatWidget'
 
@@ -116,10 +117,10 @@ function AppProvider({ children }) {
   const [products, setProducts] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [catalogQuery, setCatalogQuery] = useState('')
-  const [catalogFilters, setCatalogFilters] = useState({ category: 'all', price: 'all', tag: 'all', page: 1 })
+  const [catalogFilters, setCatalogFilters] = useState({ category: 'all', price: 'all', tag: 'all', page: 1, lastViewedId: null })
   const [productManagerFilters, setProductManagerFilters] = useState({
-    admin: { search: '', activeCategory: '全部商品', page: 1 },
-    workspace: { search: '', activeCategory: '全部商品', page: 1 },
+    admin: { search: '', activeCategory: '全部商品', page: 1, lastViewedId: null },
+    workspace: { search: '', activeCategory: '全部商品', page: 1, lastViewedId: null },
   })
   const [cart, setCart] = useState(loadCart)
   const [cartToken] = useState(loadCartToken)
@@ -548,6 +549,7 @@ function AppRoutes() {
         <Route path="my-products/new" element={<ProductEditPage />} />
         <Route path="my-products/edit/:id" element={<ProductEditPage />} />
         <Route path="customers" element={<WorkspaceCustomerPage scope="workspace" />} />
+        <Route path="commissions" element={<CommissionManagerPage scope="workspace" />} />
         <Route path="my-orders" element={<AdminOrdersPage scope="workspace" />} />
       </Route>
 
@@ -564,6 +566,7 @@ function AppRoutes() {
         <Route path="products/new" element={<ProductEditPage />} />
         <Route path="products/edit/:id" element={<ProductEditPage />} />
         <Route path="customers" element={<AdminCustomerPage />} />
+        <Route path="commissions" element={<CommissionManagerPage />} />
         <Route path="accounts" element={<AdminAccountPage />} />
         <Route path="export" element={<AdminExportPage />} />
         <Route path="orders" element={<AdminOrdersPage />} />

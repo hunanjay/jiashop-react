@@ -179,7 +179,7 @@ export default function CatalogPage() {
   // state, so they survive leaving for a product detail page and back —
   // returning to /catalog re-fetches the same filtered page instead of
   // resetting to "all".
-  const { category: activeCategory, price: priceFilter, tag: tagFilter, page, scrollY: savedScrollY } = catalogFilters
+  const { category: activeCategory, price: priceFilter, tag: tagFilter, page, lastViewedId } = catalogFilters
   const setActiveCategory = (category) => setCatalogFilters((f) => ({ ...f, category }))
   const setPriceFilter = (price) => setCatalogFilters((f) => ({ ...f, price }))
   const setTagFilter = (tag) => setCatalogFilters((f) => ({ ...f, tag }))
@@ -249,42 +249,19 @@ export default function CatalogPage() {
     }
   }, [activeCategory, priceFilter, debouncedQuery, tagFilter, page, requestKey, pushToast])
 
-  // Manual scroll restore: browsers don't restore scroll position for
-  // client-side (pushState) route changes, only real document navigations.
-  //
-  // The offset is tracked in a ref on every scroll rather than read at
-  // unmount: an effect cleanup is a *passive* effect, so React runs it only
-  // after the next route has painted — by which point the shorter detail
-  // page has shrunk the document and the browser has already clamped
-  // window.scrollY to 0, which is all we would ever save.
-  //
-  // The ref is seeded with the saved offset (not 0) because StrictMode
-  // mounts, unmounts and remounts every effect on the first mount: that
-  // simulated cleanup runs before any scroll event, so a 0-seeded ref would
-  // immediately overwrite the position we came back to restore.
-  const scrollYRef = useRef(savedScrollY || 0)
-  useEffect(() => {
-    const handleScroll = () => {
-      scrollYRef.current = window.scrollY
-    }
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      setCatalogFilters((f) => ({ ...f, scrollY: scrollYRef.current }))
-    }
-  }, [setCatalogFilters])
-
-  // Restore only when arriving back via a real "back" navigation, and only
-  // once the real items (not the skeleton) have rendered so the page has
-  // its final height.
+  // Restore scroll by re-anchoring to the last-viewed product's card rather
+  // than a saved pixel offset: a raw offset drifts whenever the page settles
+  // at a different height than when we left (fewer/more items, lazy images,
+  // different column count), which is what made restoration flaky. Only on
+  // a real "back" navigation, and only once real items (not the skeleton)
+  // have rendered so the card actually exists in the DOM.
   const restoredScrollRef = useRef(false)
   useEffect(() => {
     if (catalogLoading || restoredScrollRef.current) return
     restoredScrollRef.current = true
-    if (navigationType === 'POP' && savedScrollY) {
-      window.scrollTo(0, savedScrollY)
-    }
-  }, [catalogLoading, navigationType, savedScrollY])
+    if (navigationType !== 'POP' || !lastViewedId) return
+    document.getElementById(`catalog-product-${lastViewedId}`)?.scrollIntoView({ block: 'center' })
+  }, [catalogLoading, navigationType, lastViewedId])
 
   const clearFilters = () => {
     setActiveCategory('all')
@@ -425,8 +402,15 @@ export default function CatalogPage() {
                   return (
                     <Link
                       key={product.id}
+                      id={`catalog-product-${product.id}`}
                       to={`/catalog/${product.id}`}
-                      className="group overflow-hidden rounded-xl border border-gray-200 bg-white transition duration-300 hover:border-blue-700 hover:shadow-md"
+                      onClick={() => setCatalogFilters((f) => ({ ...f, lastViewedId: product.id }))}
+                      className={[
+                        'group overflow-hidden rounded-xl border bg-white transition duration-300',
+                        product.id === lastViewedId
+                          ? 'border-blue-600 ring-2 ring-blue-500 ring-offset-2'
+                          : 'border-gray-200 hover:border-blue-700 hover:shadow-md',
+                      ].join(' ')}
                     >
                       <div className="relative overflow-hidden bg-gray-50" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
                         <img

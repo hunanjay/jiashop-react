@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useNavigationType } from 'react-router-dom'
 
 import { api } from '../../lib/api'
 import { getApiErrorMessage } from '../../lib/api-error'
@@ -14,12 +14,15 @@ const ADMIN_PAGE_SIZE = 24
 
 export default function ProductManagerPage({ scope = 'admin' }) {
   const navigate = useNavigate()
+  const navigationType = useNavigationType()
   const { products, reloadProducts, reloadProductCategories, pushToast, session, productManagerFilters, setProductManagerFilters } = useApp()
   const [workspaceProducts, setWorkspaceProducts] = useState([])
-  const [workspaceLoading, setWorkspaceLoading] = useState(false)
+  // Starts true (not false) so the scroll-restore effect below doesn't fire
+  // before the first fetch even begins — see its comment.
+  const [workspaceLoading, setWorkspaceLoading] = useState(true)
   const [adminProducts, setAdminProducts] = useState([])
-  const [adminLoading, setAdminLoading] = useState(false)
-  const { search, activeCategory, page: adminPage } = productManagerFilters[scope]
+  const [adminLoading, setAdminLoading] = useState(true)
+  const { search, activeCategory, page: adminPage, lastViewedId } = productManagerFilters[scope]
   const [adminTotalPages, setAdminTotalPages] = useState(1)
   const [categoryCatalog, setCategoryCatalog] = useState([])
   const [categoryLoading, setCategoryLoading] = useState(false)
@@ -184,11 +187,29 @@ export default function ProductManagerPage({ scope = 'admin' }) {
     })
   }, [canManageCategoryDictionary, refreshCategoryCatalog, pushToast])
 
+  // Scroll restore, mirroring CatalogPage: navigating to edit/new unmounts
+  // this page, so on return (always a POP nav via navigate(-1) in
+  // ProductEditPage) we re-anchor to the edited card's DOM node rather than
+  // a saved pixel offset — a raw offset drifts whenever the page settles at
+  // a different height than when we left (page size, image load order).
+  const loading = scope === 'workspace' ? workspaceLoading : adminLoading
+  const restoredScrollRef = useRef(false)
+  useEffect(() => {
+    if (loading || restoredScrollRef.current) return
+    restoredScrollRef.current = true
+    if (navigationType !== 'POP' || !lastViewedId) return
+    document.getElementById(`product-card-${lastViewedId}`)?.scrollIntoView({ block: 'center' })
+  }, [loading, navigationType, lastViewedId])
+
   const openCreateDrawer = () => {
     navigate('new')
   }
 
   const openEditDrawer = (product) => {
+    setProductManagerFilters((prev) => ({
+      ...prev,
+      [scope]: { ...prev[scope], lastViewedId: product.id },
+    }))
     navigate(`edit/${product.id}`)
   }
 
@@ -338,7 +359,8 @@ export default function ProductManagerPage({ scope = 'admin' }) {
         <main className="space-y-6">
           <ProductManagerGrid
             products={scope === 'workspace' ? filteredProducts : adminProducts}
-            loading={scope === 'workspace' ? workspaceLoading : adminLoading}
+            loading={loading}
+            selectedId={lastViewedId}
             canEditProduct={canEditProduct}
             canDeleteProduct={canDeleteProduct}
             onEdit={openEditDrawer}

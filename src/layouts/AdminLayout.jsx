@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft,
   ChevronRight,
+  Coins,
   Download,
   LayoutDashboard,
   LogOut,
@@ -21,6 +22,7 @@ const adminNavigation = [
   { label: '看板', to: '/admin', icon: LayoutDashboard },
   { label: '商品管理', to: '/admin/products', icon: Package },
   { label: '客户管理', to: '/admin/customers', icon: Users },
+  { label: '分销佣金', to: '/admin/commissions', icon: Coins },
   { label: '账号管理', to: '/admin/accounts', icon: Users },
   { label: '数据导出', to: '/admin/export', icon: Download },
   { label: '订单处理', to: '/admin/orders', icon: ReceiptText },
@@ -32,6 +34,7 @@ const workspaceNavigation = [
   { label: '我的商品', to: '/workspace/my-products', icon: Package },
   { label: '我的订单', to: '/workspace/my-orders', icon: ReceiptText },
   { label: '客户管理', to: '/workspace/customers', icon: Users },
+  { label: '分销佣金', to: '/workspace/commissions', icon: Coins },
 ]
 
 export default function AdminLayout({ scope = 'admin' }) {
@@ -173,7 +176,7 @@ export default function AdminLayout({ scope = 'admin' }) {
       )}
 
       {/* Main content */}
-      <div className={`flex min-h-screen flex-1 flex-col transition-all duration-200 ${collapsed ? 'lg:ml-[72px]' : 'lg:ml-[220px]'}`}>
+      <div className={`flex min-h-screen min-w-0 flex-1 flex-col transition-all duration-200 ${collapsed ? 'lg:ml-[72px]' : 'lg:ml-[220px]'}`}>
         {/* Mobile top bar */}
         <header className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 shadow-sm lg:hidden">
           <button
@@ -197,7 +200,7 @@ export default function AdminLayout({ scope = 'admin' }) {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-5 sm:px-6 lg:px-6 lg:py-6">
+        <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-6 lg:py-6">
           <Outlet />
         </main>
       </div>

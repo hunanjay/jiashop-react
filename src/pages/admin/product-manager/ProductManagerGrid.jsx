@@ -4,7 +4,7 @@ import { formatCurrency } from '../../../lib/format'
 
 const CARD_IMAGE_ASPECT = '1 / 1'
 
-export default function ProductManagerGrid({ products, loading, canEditProduct, canDeleteProduct, onEdit, onDelete, onReset }) {
+export default function ProductManagerGrid({ products, loading, selectedId, canEditProduct, canDeleteProduct, onEdit, onDelete, onReset }) {
   if (loading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-gray-500 shadow-sm">
@@ -40,7 +40,13 @@ export default function ProductManagerGrid({ products, loading, canEditProduct, 
         return (
           <article
             key={product.id}
-            className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition duration-150 hover:shadow-md"
+            id={`product-card-${product.id}`}
+            className={[
+              'group overflow-hidden rounded-xl border bg-white shadow-sm transition duration-150',
+              product.id === selectedId
+                ? 'border-blue-600 ring-2 ring-blue-500 ring-offset-2'
+                : 'border-gray-200 hover:shadow-md',
+            ].join(' ')}
           >
             <div className="relative overflow-hidden bg-slate-100" style={{ aspectRatio: CARD_IMAGE_ASPECT }}>
               <div className="absolute left-2 top-2 z-10 flex flex-col gap-1">
