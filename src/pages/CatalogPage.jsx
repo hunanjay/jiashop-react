@@ -44,38 +44,6 @@ function FilterPanel({
 }) {
   return (
     <div className="space-y-4">
-      <div className="py-1">
-        <p className="mb-2.5 text-sm font-semibold text-gray-900">分类</p>
-        <ul className="space-y-1">
-          {availableCategories.map((item) => (
-            <li key={item.value}>
-              <button
-                type="button"
-                onClick={() => setActiveCategory(item.value)}
-                className={[
-                  'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-all duration-150',
-                  activeCategory === item.value
-                    ? 'bg-blue-50 text-blue-700 font-semibold'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-                ].join(' ')}
-              >
-                <span>{item.label}</span>
-                <span
-                  className={[
-                    'text-xs font-normal',
-                    activeCategory === item.value ? 'text-blue-600 font-medium' : 'text-gray-400',
-                  ].join(' ')}
-                >
-                  {item.value !== 'all'
-                    ? products.filter((p) => p.category === item.value).length
-                    : products.length}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
       <div className="grid grid-cols-2 gap-4 py-1">
         {/* 标签 */}
         <div className="space-y-2">
@@ -128,6 +96,38 @@ function FilterPanel({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="py-1">
+        <p className="mb-2.5 text-sm font-semibold text-gray-900">分类</p>
+        <ul className="space-y-1">
+          {availableCategories.map((item) => (
+            <li key={item.value}>
+              <button
+                type="button"
+                onClick={() => setActiveCategory(item.value)}
+                className={[
+                  'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-all duration-150',
+                  activeCategory === item.value
+                    ? 'bg-blue-50 text-blue-700 font-semibold'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                ].join(' ')}
+              >
+                <span>{item.label}</span>
+                <span
+                  className={[
+                    'text-xs font-normal',
+                    activeCategory === item.value ? 'text-blue-600 font-medium' : 'text-gray-400',
+                  ].join(' ')}
+                >
+                  {item.value !== 'all'
+                    ? products.filter((p) => p.category === item.value).length
+                    : products.length}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {activeFilterCount > 0 && (

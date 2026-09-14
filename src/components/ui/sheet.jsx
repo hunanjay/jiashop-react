@@ -38,7 +38,7 @@ const SheetContent = React.forwardRef(({ side = 'right', className, children, ..
     <Dialog.Content
       ref={ref}
       className={cn(
-        'fixed z-50 overflow-hidden border border-gray-200 bg-white text-gray-900 shadow-xl outline-none',
+        'fixed z-50 flex flex-col overflow-hidden border border-gray-200 bg-white text-gray-900 shadow-xl outline-none',
         'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:duration-300',
         'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
         slideAnimations[side] || slideAnimations.right,
@@ -73,7 +73,7 @@ const SheetDescription = React.forwardRef(({ className, ...props }, ref) => (
 SheetDescription.displayName = 'SheetDescription'
 
 const SheetBody = ({ className, ...props }) => (
-  <div className={cn('flex-1 overflow-y-auto p-6', className)} {...props} />
+  <div className={cn('min-h-0 flex-1 overflow-y-auto p-6', className)} {...props} />
 )
 
 const SheetFooter = ({ className, ...props }) => (
