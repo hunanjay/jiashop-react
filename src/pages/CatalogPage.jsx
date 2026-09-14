@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigationType } from 'react-router-dom'
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, LayoutGrid, Search, SlidersHorizontal, Tag, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LayoutGrid, Search, SlidersHorizontal, Tag, X } from 'lucide-react'
 
 import { useApp } from '../lib/app-context'
 import { api } from '../lib/api'
@@ -37,10 +37,9 @@ function FilterPanel({
   availableCategories,
   clearFilters,
   removeFilter,
-  priceOpen,
-  setPriceOpen,
   tagFilter,
   setTagFilter,
+  onCategorySelect,
 }) {
   return (
     <div className="space-y-4">
@@ -105,7 +104,10 @@ function FilterPanel({
             <li key={item.value}>
               <button
                 type="button"
-                onClick={() => setActiveCategory(item.value)}
+                onClick={() => {
+                  setActiveCategory(item.value)
+                  onCategorySelect?.()
+                }}
                 className={[
                   'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-all duration-150',
                   activeCategory === item.value
@@ -184,7 +186,7 @@ export default function CatalogPage() {
   const setPriceFilter = (price) => setCatalogFilters((f) => ({ ...f, price }))
   const setTagFilter = (tag) => setCatalogFilters((f) => ({ ...f, tag }))
   const setPage = (next) => setCatalogFilters((f) => ({ ...f, page: typeof next === 'function' ? next(f.page) : next }))
-  const [priceOpen, setPriceOpen] = useState(true)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const debouncedQuery = useDebounce(catalogQuery, 300)
 
   const [items, setItems] = useState([])
@@ -289,8 +291,6 @@ export default function CatalogPage() {
     availableCategories: categoryOptions,
     clearFilters,
     removeFilter,
-    priceOpen,
-    setPriceOpen,
     tagFilter,
     setTagFilter,
   }
@@ -346,7 +346,7 @@ export default function CatalogPage() {
 
         {/* Mobile filter button */}
         <div className="lg:hidden">
-          <Sheet>
+          <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
             <SheetTrigger asChild>
               <button
                 type="button"
@@ -361,12 +361,12 @@ export default function CatalogPage() {
                 )}
               </button>
             </SheetTrigger>
-            <SheetContent side="left">
+            <SheetContent side="left" className="w-[86vw] max-w-sm">
               <SheetHeader>
                 <SheetTitle>筛选条件</SheetTitle>
               </SheetHeader>
               <SheetBody>
-                <FilterPanel {...filterProps} />
+                <FilterPanel {...filterProps} onCategorySelect={() => setMobileFiltersOpen(false)} />
               </SheetBody>
             </SheetContent>
           </Sheet>
