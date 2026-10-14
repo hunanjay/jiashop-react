@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { ImageCropper } from "./ImageCropper";
 import { Card, CardContent } from "./card";
-import { Upload, X, Edit } from "lucide-react";
+import { Upload, X, Edit, Copy, ExternalLink } from "lucide-react";
 import { useApp } from "../../lib/app-context";
+import { api } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { extractClipboardImage } from "../../lib/clipboard-image";
 import { normalizeOrientation, downscaleImage } from "../../lib/crop-image";
@@ -18,6 +19,7 @@ export function ImageCardUploader({
   outputHeight = 800,
   multiple = false,
   enablePaste = true,
+  enableCopy = false,
   className 
 }) {
   const { pushToast } = useApp();
@@ -101,6 +103,58 @@ export function ImageCardUploader({
     }
   };
 
+  const handleCopyImage = async (event) => {
+    event.stopPropagation();
+    try {
+      if (!navigator.clipboard?.write || !window.ClipboardItem) {
+        throw new Error("当前浏览器不支持复制图片到剪贴板");
+      }
+      const imageUrl = currentImage.url;
+      let objectKey = imageUrl.startsWith("uploads/") ? imageUrl.split("?")[0] : null;
+      if (!objectKey) {
+        try {
+          const pathname = decodeURIComponent(new URL(imageUrl, window.location.href).pathname);
+          const uploadsIndex = pathname.indexOf("/uploads/");
+          if (uploadsIndex >= 0) objectKey = decodeURIComponent(pathname.slice(uploadsIndex + 1));
+        } catch {
+          // Non-URL values (such as data URLs) are fetched directly below.
+        }
+      }
+
+      const sourceBlobPromise = objectKey
+        ? api.get("/upload/image", { params: { key: objectKey }, responseType: "blob" }).then((response) => response.data)
+        : fetch(imageUrl).then((response) => {
+            if (!response.ok) throw new Error("图片读取失败");
+            return response.blob();
+          });
+      const pngBlobPromise = sourceBlobPromise.then(async (sourceBlob) => {
+        const bitmap = await createImageBitmap(sourceBlob);
+        const canvas = document.createElement("canvas");
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("图片转换失败");
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close?.();
+        return new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("图片转换失败")), "image/png");
+        });
+      });
+
+      // Pass the pending blob to ClipboardItem immediately so the browser sees
+      // the clipboard write while the click's user activation is still active.
+      await navigator.clipboard.write([new window.ClipboardItem({ "image/png": pngBlobPromise })]);
+      pushToast("success", "图片已复制", "可直接粘贴到其他应用");
+    } catch {
+      pushToast("error", "复制图片失败", "请检查登录状态和图片读取权限，或点打开原图后复制、下载。外部图片仍可能受其服务器跨域策略限制。");
+    }
+  };
+
+  const handleOpenImage = (event) => {
+    event.stopPropagation();
+    window.open(currentImage.url, "_blank", "noopener,noreferrer");
+  };
+
   const handlePaste = async (event) => {
     if (!enablePaste) return
     const pastedImage = await extractClipboardImage(event)
@@ -142,16 +196,20 @@ export function ImageCardUploader({
                 alt={label}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 flex items-center justify-center gap-3 bg-slate-950/40 opacity-0 transition-all duration-300 group-hover:opacity-100 backdrop-blur-[2px]">
+              <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-950/40 opacity-0 transition-all duration-300 group-hover:opacity-100 backdrop-blur-[2px]">
+                {enableCopy && <button type="button" onClick={handleCopyImage} title="复制图片" aria-label="复制图片" className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-900 shadow-xl transition-all hover:scale-110 active:scale-90"><Copy className="h-4 w-4" /></button>}
+                {enableCopy && <button type="button" onClick={handleOpenImage} title="打开原图" aria-label="打开原图" className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-900 shadow-xl transition-all hover:scale-110 active:scale-90"><ExternalLink className="h-4 w-4" /></button>}
                 <button
+                  type="button"
                   onClick={handleEdit}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-900 shadow-xl transition-all hover:scale-110 active:scale-90"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-900 shadow-xl transition-all hover:scale-110 active:scale-90"
                 >
                   <Edit className="h-4.5 w-4.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={handleRemove}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500 text-white shadow-xl transition-all hover:scale-110 active:scale-90"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500 text-white shadow-xl transition-all hover:scale-110 active:scale-90"
                 >
                   <X className="h-4.5 w-4.5" />
                 </button>

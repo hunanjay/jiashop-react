@@ -38,6 +38,7 @@ export default function ProductEditPage() {
     : null
   const [errors, setErrors] = useState({})
   const [selectedPasteTarget, setSelectedPasteTarget] = useState('main')
+  const [dropTarget, setDropTarget] = useState(null)
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [creatingCategory, setCreatingCategory] = useState(false)
@@ -190,6 +191,43 @@ export default function ProductEditPage() {
   const addGalleryImage = useCallback((val) => {
     setForm((current) => ({ ...current, images: [...(current.images || []), val] }))
   }, [])
+
+  const startImageDrag = (event, type, index) => {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('application/x-jiashop-product-image', JSON.stringify({ type, index }))
+    event.currentTarget.classList.add('opacity-50', 'scale-95')
+  }
+
+  const handleImageDrop = (event, targetType, targetIndex = null) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setDropTarget(null)
+    let source
+    try {
+      source = JSON.parse(event.dataTransfer.getData('application/x-jiashop-product-image'))
+    } catch {
+      return
+    }
+    if (!['main', 'gallery'].includes(source.type) || !Number.isInteger(source.index)) return
+
+    setForm((current) => {
+      const lists = {
+        main: [...(current.mainImages || [])],
+        gallery: [...(current.images || [])],
+      }
+      if (source.index < 0 || source.index >= lists[source.type].length) return current
+      const [image] = lists[source.type].splice(source.index, 1)
+      const insertionIndex = targetIndex === null ? lists[targetType].length : targetIndex
+      lists[targetType].splice(Math.max(0, Math.min(insertionIndex, lists[targetType].length)), 0, image)
+      return { ...current, mainImages: lists.main, images: lists.gallery }
+    })
+  }
+
+  const acceptImageDrop = (event, key) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    setDropTarget(key)
+  }
 
   const handlePasteImage = useCallback(async (event) => {
     const pastedImage = await extractClipboardImage(event)
@@ -545,19 +583,11 @@ export default function ProductEditPage() {
                       <div
                         key={idx}
                         draggable={true}
-                        onDragStart={(e) => { e.dataTransfer.setData('sourceIndex', idx.toString()); e.currentTarget.classList.add('opacity-50', 'scale-95') }}
-                        onDragEnd={(e) => e.currentTarget.classList.remove('opacity-50', 'scale-95')}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault()
-                          const src = parseInt(e.dataTransfer.getData('sourceIndex'))
-                          if (src === idx) return
-                          const next = [...(form.mainImages || [])]
-                          const [moved] = next.splice(src, 1)
-                          next.splice(idx, 0, moved)
-                          setForm((c) => ({ ...c, mainImages: next }))
-                        }}
-                        className={`relative group cursor-grab active:cursor-grabbing rounded-xl border bg-white overflow-hidden transition-all ${selectedPasteTarget === `main-${idx}` ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-200 hover:border-blue-400'}`}
+                        onDragStart={(e) => startImageDrag(e, 'main', idx)}
+                        onDragEnd={(e) => { e.currentTarget.classList.remove('opacity-50', 'scale-95'); setDropTarget(null) }}
+                        onDragOver={(e) => acceptImageDrop(e, `main-${idx}`)}
+                        onDrop={(e) => handleImageDrop(e, 'main', idx)}
+                        className={`relative group cursor-grab active:cursor-grabbing rounded-xl border bg-white overflow-hidden transition-all ${dropTarget === `main-${idx}` ? 'border-blue-500 ring-2 ring-blue-500/30' : selectedPasteTarget === `main-${idx}` ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-200 hover:border-blue-400'}`}
                       >
                         {idx === 0 && <span className="absolute top-1.5 left-1.5 z-10 rounded px-1.5 py-0.5 text-[9px] font-bold bg-blue-600 text-white">封面</span>}
                         <ImageCardUploader
@@ -566,13 +596,18 @@ export default function ProductEditPage() {
                           outputWidth={800}
                           outputHeight={800}
                           enablePaste={false}
+                          enableCopy
                           onActivate={() => setSelectedPasteTarget(`main-${idx}`)}
                           onChange={(val) => { setSelectedPasteTarget(`main-${idx}`); updateMainImage(idx, val) }}
                           className="space-y-0"
                         />
                       </div>
                     ))}
-                    <div className={`relative group rounded-xl overflow-hidden border bg-white transition-all ${selectedPasteTarget === 'main-new' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-dashed border-gray-200 hover:border-blue-400'}`}>
+                    <div
+                      onDragOver={(e) => acceptImageDrop(e, 'main-new')}
+                      onDrop={(e) => handleImageDrop(e, 'main')}
+                      className={`relative group rounded-xl overflow-hidden border bg-white transition-all ${dropTarget === 'main-new' || selectedPasteTarget === 'main-new' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-dashed border-gray-200 hover:border-blue-400'}`}
+                    >
                       <ImageCardUploader
                         value={null}
                         aspectRatio={1}
@@ -605,19 +640,11 @@ export default function ProductEditPage() {
                       <div
                         key={idx}
                         draggable={true}
-                        onDragStart={(e) => { e.dataTransfer.setData('sourceIndex', idx.toString()); e.currentTarget.classList.add('opacity-50', 'scale-95') }}
-                        onDragEnd={(e) => e.currentTarget.classList.remove('opacity-50', 'scale-95')}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault()
-                          const src = parseInt(e.dataTransfer.getData('sourceIndex'))
-                          if (src === idx) return
-                          const next = [...(form.images || [])]
-                          const [moved] = next.splice(src, 1)
-                          next.splice(idx, 0, moved)
-                          setForm((c) => ({ ...c, images: next }))
-                        }}
-                        className={`relative group cursor-grab active:cursor-grabbing rounded-xl border bg-white overflow-hidden transition-all ${selectedPasteTarget === `gallery-${idx}` ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-200 hover:border-blue-400'}`}
+                        onDragStart={(e) => startImageDrag(e, 'gallery', idx)}
+                        onDragEnd={(e) => { e.currentTarget.classList.remove('opacity-50', 'scale-95'); setDropTarget(null) }}
+                        onDragOver={(e) => acceptImageDrop(e, `gallery-${idx}`)}
+                        onDrop={(e) => handleImageDrop(e, 'gallery', idx)}
+                        className={`relative group cursor-grab active:cursor-grabbing rounded-xl border bg-white overflow-hidden transition-all ${dropTarget === `gallery-${idx}` ? 'border-blue-500 ring-2 ring-blue-500/30' : selectedPasteTarget === `gallery-${idx}` ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-200 hover:border-blue-400'}`}
                       >
                         <ImageCardUploader
                           value={img}
@@ -625,13 +652,18 @@ export default function ProductEditPage() {
                           outputWidth={800}
                           outputHeight={1067}
                           enablePaste={false}
+                          enableCopy
                           onActivate={() => setSelectedPasteTarget(`gallery-${idx}`)}
                           onChange={(val) => { setSelectedPasteTarget(`gallery-${idx}`); updateGalleryImage(idx, val) }}
                           className="space-y-0"
                         />
                       </div>
                     ))}
-                    <div className={`relative group rounded-xl overflow-hidden border bg-white transition-all ${selectedPasteTarget === 'gallery-new' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-dashed border-gray-200 hover:border-blue-400'}`}>
+                    <div
+                      onDragOver={(e) => acceptImageDrop(e, 'gallery-new')}
+                      onDrop={(e) => handleImageDrop(e, 'gallery')}
+                      className={`relative group rounded-xl overflow-hidden border bg-white transition-all ${dropTarget === 'gallery-new' || selectedPasteTarget === 'gallery-new' ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-dashed border-gray-200 hover:border-blue-400'}`}
+                    >
                       <ImageCardUploader
                         value={null}
                         aspectRatio={3 / 4}
